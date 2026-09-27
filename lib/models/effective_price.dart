@@ -9,6 +9,10 @@ class EffectivePrice {
   final num? minPricePc;
   final num? minPriceUnit;
   final num? incRate;
+  final num? priceBeforeTax;
+  final num? priceAfterTax;
+  final bool includeTax;
+  final num? taxRate;
   final String? currency;
   final String? effectiveFrom;
   final String? uom;
@@ -20,12 +24,23 @@ class EffectivePrice {
     this.minPricePc,
     this.minPriceUnit,
     this.incRate,
+    this.priceBeforeTax,
+    this.priceAfterTax,
+    this.includeTax = true,
+    this.taxRate,
     this.currency,
     this.effectiveFrom,
     this.uom,
     this.packSize,
     this.packUnit,
   });
+
+  /// The figure actually validated against on submit
+  /// (PricingValidationService gates BELOW_MINIMUM/AT_MINIMUM/ABOVE_MINIMUM
+  /// on price_after_tax, not min_price_pc) — mirrors RequestComposer.js's
+  /// `guidanceFor(item).price_after_tax ?? guidanceFor(item).min_price_pc`
+  /// used for both the "Min" chip and the proposed-price default.
+  num? get effectivePrice => priceAfterTax ?? minPricePc;
 
   bool get isUpcoming {
     if (effectiveFrom == null) return false;
@@ -43,6 +58,10 @@ class EffectivePrice {
       minPricePc: asNumOrNull(json['min_price_pc']),
       minPriceUnit: asNumOrNull(json['min_price_unit']),
       incRate: asNumOrNull(json['inc_rate']),
+      priceBeforeTax: asNumOrNull(json['price_before_tax']),
+      priceAfterTax: asNumOrNull(json['price_after_tax']),
+      includeTax: json['include_tax'] == true,
+      taxRate: asNumOrNull(json['tax_rate']),
       currency: json['currency']?.toString(),
       effectiveFrom: json['effective_from']?.toString(),
       uom: item?['uom']?.toString(),

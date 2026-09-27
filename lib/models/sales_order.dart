@@ -79,6 +79,7 @@ class SalesOrder {
   final int? splitSequence;
   final String? customerName;
   final String? quotationNumber;
+  final int? priceOfferRequestId;
   final List<SalesOrderLine> lines;
   final List<OrderHold> holds;
   final SalesOrder? parentOrder;
@@ -98,12 +99,21 @@ class SalesOrder {
     this.splitSequence,
     this.customerName,
     this.quotationNumber,
+    this.priceOfferRequestId,
     this.lines = const [],
     this.holds = const [],
     this.parentOrder,
   });
 
   bool get hasActiveHold => holdStatus != null && holdStatus != 'NONE';
+
+  /// Credit check is considered disabled when there's nothing meaningful to
+  /// show (no check performed, or it passed cleanly) — only surface it when
+  /// there's an actual credit issue (e.g. FAILED, ON_HOLD).
+  bool get showCreditStatus {
+    final status = creditStatus?.toUpperCase();
+    return status != null && status != 'NONE' && status != 'PASSED';
+  }
 
   /// Matches OrdersView.js's orderTotal(): sum of each line's total after tax.
   num get orderTotal => lines.fold<num>(0, (sum, line) => sum + line.lineTotal);
@@ -127,6 +137,7 @@ class SalesOrder {
       splitSequence: asIntOrNull(json['split_sequence']),
       customerName: json['customer_name']?.toString(),
       quotationNumber: json['quotation_number']?.toString(),
+      priceOfferRequestId: asIntOrNull(json['price_offer_request_id']),
       lines: linesJson.map((l) => SalesOrderLine.fromJson(l as Map<String, dynamic>)).toList(),
       holds: holdsJson.map((h) => OrderHold.fromJson(h as Map<String, dynamic>)).toList(),
       parentOrder: parentOrderJson != null ? SalesOrder.fromJson(parentOrderJson) : null,

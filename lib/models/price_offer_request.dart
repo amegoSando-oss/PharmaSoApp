@@ -13,8 +13,11 @@ class PriceOfferLine {
   final num? priceDifference;
   final String? priceStatus;
   final String? lineStatus;
-  final num? focQuantity;
-  final String? focUom;
+  // PriceOfferRequestLineResource only ever sends foc_percent (a flag for
+  // the approver, informational only) — there is no foc_quantity/foc_uom
+  // on this resource at all; the approver adds a separate, price-0 line
+  // for the actual free goods instead (see PriceOfferService::addLine()).
+  final num? focPercent;
 
   PriceOfferLine({
     this.id,
@@ -27,8 +30,7 @@ class PriceOfferLine {
     this.priceDifference,
     this.priceStatus,
     this.lineStatus,
-    this.focQuantity,
-    this.focUom,
+    this.focPercent,
   });
 
   factory PriceOfferLine.fromJson(Map<String, dynamic> json) {
@@ -44,8 +46,7 @@ class PriceOfferLine {
       priceDifference: asNumOrNull(json['price_difference']),
       priceStatus: json['price_status']?.toString(),
       lineStatus: json['line_status']?.toString(),
-      focQuantity: asNumOrNull(json['foc_quantity']),
-      focUom: json['foc_uom']?.toString(),
+      focPercent: asNumOrNull(json['foc_percent']),
     );
   }
 }

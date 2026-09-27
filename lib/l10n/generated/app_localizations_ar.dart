@@ -319,7 +319,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get createOfferGuidanceUpcoming => 'قادم';
 
   @override
-  String get createOfferGuidanceMin => 'الحد الأدنى';
+  String get createOfferGuidanceMin => 'الحد الأدنى (شامل الضريبة)';
+
+  @override
+  String get createOfferGuidanceBeforeTax => 'قبل الضريبة';
+
+  @override
+  String get createOfferGuidanceTax => 'الضريبة';
 
   @override
   String get createOfferGuidanceUom => 'وحدة القياس';
@@ -347,13 +353,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get createOfferProposedPriceLabel => 'السعر المقترح';
 
   @override
-  String get createOfferFocLabel => 'مجاني بدون مقابل (FOC)';
+  String get createOfferFocPercentLabel => 'نسبة المجاني %';
 
   @override
-  String get createOfferFocQuantityLabel => 'كمية المجاني';
-
-  @override
-  String get createOfferFocUomLabel => 'وحدة قياس المجاني';
+  String get createOfferFocHelperText =>
+      'علامة توضيحية للمعتمد فقط — لا تغيّر السعر أو الكمية. يقوم المعتمد بإضافة سطر منفصل بسعر صفر للكمية المجانية الفعلية.';
 
   @override
   String get createOfferStockDisclaimer =>
@@ -532,8 +536,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String requestDetailFocLine(Object focQuantity, Object focUom) {
-    return 'مجاني $focQuantity $focUom';
+  String requestDetailFocLine(Object focPercent) {
+    return 'مجاني $focPercent%';
   }
 
   @override
@@ -549,10 +553,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get requestDetailItemLabel => 'الصنف';
 
   @override
-  String get requestDetailFocQtyLabel => 'كمية مجانية (اختياري)';
-
-  @override
-  String get requestDetailFocUomLabel => 'وحدة القياس المجانية (اختياري)';
+  String get requestDetailFocPercentLabel => 'نسبة المجاني % (اختياري)';
 
   @override
   String get requestDetailNoActionsDraft =>
@@ -621,6 +622,29 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get requestDetailCreateSalesOrderButton => 'إنشاء أمر بيع';
+
+  @override
+  String get relatedRecordsViewQuotationButton => 'عرض عرض السعر';
+
+  @override
+  String get relatedRecordsViewSalesOrderButton => 'عرض أمر البيع';
+
+  @override
+  String get relatedRecordsViewRequestButton => 'عرض طلب عرض السعر';
+
+  @override
+  String get relatedRecordsNoSalesOrderYet => 'لا يوجد أمر بيع بعد';
+
+  @override
+  String get relatedRecordsSelectSalesOrderTitle => 'اختر أمر البيع';
+
+  @override
+  String get relatedRecordsLoadOrdersFailed =>
+      'تعذر تحميل أوامر البيع. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get relatedRecordsLoadQuotationFailed =>
+      'تعذر تحميل عرض السعر. يرجى المحاولة مرة أخرى.';
 
   @override
   String get requestDetailActionFailedGeneric =>
@@ -750,7 +774,49 @@ class AppLocalizationsAr extends AppLocalizations {
   String get quotationDetailSendButton => 'إرسال إلى العميل';
 
   @override
-  String get quotationDetailCreateOrderButton => 'إنشاء أمر بيع';
+  String quotationDetailReleasedRemainingLine(
+    Object released,
+    Object remaining,
+  ) {
+    return 'تم الإفراج عن $released · المتبقي $remaining';
+  }
+
+  @override
+  String get quotationDetailReleaseSectionTitle => 'الإفراج إلى أمر بيع';
+
+  @override
+  String get quotationDetailReleaseNotePartial =>
+      'أفرج عن أي جزء من الكمية المتبقية للبند — يبقى الباقي مفتوحًا على عرض السعر للإفراج عنه لاحقًا.';
+
+  @override
+  String get quotationDetailReleaseNoteFullOnly =>
+      'الإفراج الجزئي معطّل — يتم الإفراج عن كل البنود المفتوحة معًا، بكامل كميتها المتبقية، في أمر بيع واحد.';
+
+  @override
+  String get quotationDetailNoReleasableLines =>
+      'تم الإفراج بالكامل عن جميع البنود — لا يوجد شيء متبقٍ للإفراج عنه.';
+
+  @override
+  String quotationDetailRemainingLabelValue(Object remaining, Object uom) {
+    return 'المتبقي $remaining $uom';
+  }
+
+  @override
+  String get quotationDetailReleaseQtyLabel => 'كمية الإفراج';
+
+  @override
+  String get quotationDetailWarehouseLabel => 'المخزن';
+
+  @override
+  String get quotationDetailFillFullRemainingButton =>
+      'ملء كامل الكمية المتبقية';
+
+  @override
+  String get quotationDetailReleaseButton => 'الإفراج إلى أمر بيع';
+
+  @override
+  String get quotationDetailReleaseButtonFullOnly =>
+      'الإفراج عن كامل عرض السعر إلى أمر بيع';
 
   @override
   String get salesOrdersTitle => 'طلبات المبيعات';
@@ -933,18 +999,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get widgetsTryAgainButton => 'إعادة المحاولة';
 
   @override
-  String get widgetsSelectWarehouseTitle => 'اختر مخزن التنفيذ';
-
-  @override
-  String get widgetsSelectWarehouseSubtitle =>
-      'سيتم إنشاء أمر البيع مقابل هذا المخزن.';
-
-  @override
-  String get widgetsNoWarehousesAssignedMessage =>
-      'لا توجد لديك مخازن مخصصة للاختيار منها. يرجى التواصل مع المسؤول لتخصيص مخزن لك.';
-
-  @override
   String widgetsRejectedReason(Object reason) {
     return 'مرفوض: $reason';
   }
+
+  @override
+  String get itemPickerTitle => 'اختر الصنف';
+
+  @override
+  String get itemPickerNoMatches => 'لا توجد أصناف مطابقة';
 }

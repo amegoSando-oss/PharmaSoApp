@@ -322,7 +322,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createOfferGuidanceUpcoming => 'Upcoming';
 
   @override
-  String get createOfferGuidanceMin => 'Min';
+  String get createOfferGuidanceMin => 'Min (after tax)';
+
+  @override
+  String get createOfferGuidanceBeforeTax => 'Before tax';
+
+  @override
+  String get createOfferGuidanceTax => 'Tax';
 
   @override
   String get createOfferGuidanceUom => 'UOM';
@@ -350,13 +356,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createOfferProposedPriceLabel => 'Proposed price';
 
   @override
-  String get createOfferFocLabel => 'Free of charge (FOC)';
+  String get createOfferFocPercentLabel => 'FOC %';
 
   @override
-  String get createOfferFocQuantityLabel => 'FOC qty';
-
-  @override
-  String get createOfferFocUomLabel => 'FOC UOM';
+  String get createOfferFocHelperText =>
+      'Flags this line for the approver — does not change price or quantity. The approver adds a separate, price-0 line for the actual free goods.';
 
   @override
   String get createOfferStockDisclaimer =>
@@ -536,8 +540,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String requestDetailFocLine(Object focQuantity, Object focUom) {
-    return 'FOC $focQuantity $focUom';
+  String requestDetailFocLine(Object focPercent) {
+    return 'FOC $focPercent%';
   }
 
   @override
@@ -553,10 +557,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get requestDetailItemLabel => 'Item';
 
   @override
-  String get requestDetailFocQtyLabel => 'FOC qty (optional)';
-
-  @override
-  String get requestDetailFocUomLabel => 'FOC UOM (optional)';
+  String get requestDetailFocPercentLabel => 'FOC % (optional)';
 
   @override
   String get requestDetailNoActionsDraft =>
@@ -626,6 +627,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get requestDetailCreateSalesOrderButton => 'Create sales order';
+
+  @override
+  String get relatedRecordsViewQuotationButton => 'View quotation';
+
+  @override
+  String get relatedRecordsViewSalesOrderButton => 'View sales order';
+
+  @override
+  String get relatedRecordsViewRequestButton => 'View request';
+
+  @override
+  String get relatedRecordsNoSalesOrderYet => 'No sales order yet';
+
+  @override
+  String get relatedRecordsSelectSalesOrderTitle => 'Select sales order';
+
+  @override
+  String get relatedRecordsLoadOrdersFailed =>
+      'Failed to load sales orders. Please try again.';
+
+  @override
+  String get relatedRecordsLoadQuotationFailed =>
+      'Failed to load the quotation. Please try again.';
 
   @override
   String get requestDetailActionFailedGeneric =>
@@ -757,7 +781,49 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quotationDetailSendButton => 'Send to customer';
 
   @override
-  String get quotationDetailCreateOrderButton => 'Create sales order';
+  String quotationDetailReleasedRemainingLine(
+    Object released,
+    Object remaining,
+  ) {
+    return 'Released $released · Remaining $remaining';
+  }
+
+  @override
+  String get quotationDetailReleaseSectionTitle => 'Release into a sales order';
+
+  @override
+  String get quotationDetailReleaseNotePartial =>
+      'Release any part of a line\'s remaining quantity — the rest stays open on the quotation for a later release.';
+
+  @override
+  String get quotationDetailReleaseNoteFullOnly =>
+      'Partial release is disabled — every open line releases together, at its full remaining quantity, in one sales order.';
+
+  @override
+  String get quotationDetailNoReleasableLines =>
+      'Every line is fully released — nothing left to release.';
+
+  @override
+  String quotationDetailRemainingLabelValue(Object remaining, Object uom) {
+    return 'Remaining $remaining $uom';
+  }
+
+  @override
+  String get quotationDetailReleaseQtyLabel => 'Release qty';
+
+  @override
+  String get quotationDetailWarehouseLabel => 'Warehouse';
+
+  @override
+  String get quotationDetailFillFullRemainingButton =>
+      'Fill full remaining quantity';
+
+  @override
+  String get quotationDetailReleaseButton => 'Release into sales order';
+
+  @override
+  String get quotationDetailReleaseButtonFullOnly =>
+      'Release full quotation into sales order';
 
   @override
   String get salesOrdersTitle => 'Sales orders';
@@ -942,18 +1008,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get widgetsTryAgainButton => 'Try again';
 
   @override
-  String get widgetsSelectWarehouseTitle => 'Select fulfillment warehouse';
-
-  @override
-  String get widgetsSelectWarehouseSubtitle =>
-      'The sales order will be created against this warehouse.';
-
-  @override
-  String get widgetsNoWarehousesAssignedMessage =>
-      'You have no assigned warehouses to select from. Contact your administrator to get one assigned.';
-
-  @override
   String widgetsRejectedReason(Object reason) {
     return 'Rejected: $reason';
   }
+
+  @override
+  String get itemPickerTitle => 'Select item';
+
+  @override
+  String get itemPickerNoMatches => 'No matching items';
 }

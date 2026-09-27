@@ -40,6 +40,9 @@ class QuotationLine {
   final num? focQuantity;
   final String? focUom;
   final num? minimumPrice;
+  final num releasedQuantity;
+  final num declinedQuantity;
+  final num remainingQuantity;
 
   QuotationLine({
     required this.id,
@@ -51,19 +54,28 @@ class QuotationLine {
     this.focQuantity,
     this.focUom,
     this.minimumPrice,
-  });
+    this.releasedQuantity = 0,
+    this.declinedQuantity = 0,
+    num? remainingQuantity,
+  }) : remainingQuantity = remainingQuantity ?? quantity;
 
-  factory QuotationLine.fromJson(Map<String, dynamic> json) => QuotationLine(
-        id: asInt(json['id']),
-        itemId: asInt(json['item_id']),
-        itemName: json['item_name']?.toString(),
-        uom: json['uom']?.toString(),
-        quantity: asNumOrNull(json['quantity']) ?? 0,
-        price: asNumOrNull(json['price']) ?? 0,
-        focQuantity: asNumOrNull(json['foc_quantity']),
-        focUom: json['foc_uom']?.toString(),
-        minimumPrice: asNumOrNull(json['minimum_price']),
-      );
+  factory QuotationLine.fromJson(Map<String, dynamic> json) {
+    final quantity = asNumOrNull(json['quantity']) ?? 0;
+    return QuotationLine(
+      id: asInt(json['id']),
+      itemId: asInt(json['item_id']),
+      itemName: json['item_name']?.toString(),
+      uom: json['uom']?.toString(),
+      quantity: quantity,
+      price: asNumOrNull(json['price']) ?? 0,
+      focQuantity: asNumOrNull(json['foc_quantity']),
+      focUom: json['foc_uom']?.toString(),
+      minimumPrice: asNumOrNull(json['minimum_price']),
+      releasedQuantity: asNumOrNull(json['released_quantity']) ?? 0,
+      declinedQuantity: asNumOrNull(json['declined_quantity']) ?? 0,
+      remainingQuantity: asNumOrNull(json['remaining_quantity']) ?? quantity,
+    );
+  }
 }
 
 class QuotationVersion {
@@ -73,6 +85,10 @@ class QuotationVersion {
   final List<QuotationLine> lines;
 
   QuotationVersion({required this.id, required this.versionNumber, this.status, required this.lines});
+
+  /// Lines still open for release/decline — mirrors QuotationsView.js's
+  /// `releasableLines` computed property.
+  List<QuotationLine> get releasableLines => lines.where((l) => l.remainingQuantity > 0).toList();
 
   factory QuotationVersion.fromJson(Map<String, dynamic> json) {
     final linesJson = (json['lines'] as List?) ?? const [];
@@ -103,6 +119,7 @@ class Quotation {
   final String status;
   final int version;
   final List<QuotationVersion> versions;
+  final int? priceOfferRequestId;
 
   Quotation({
     required this.id,
@@ -119,6 +136,7 @@ class Quotation {
     required this.status,
     required this.version,
     required this.versions,
+    this.priceOfferRequestId,
   });
 
   /// The lines to display — the highest version number available.
@@ -145,6 +163,7 @@ class Quotation {
       status: json['status']?.toString() ?? '',
       version: asIntOrNull(json['version']) ?? 1,
       versions: versionsJson.map((v) => QuotationVersion.fromJson(v as Map<String, dynamic>)).toList(),
+      priceOfferRequestId: asIntOrNull(json['price_offer_request_id']),
     );
   }
 }

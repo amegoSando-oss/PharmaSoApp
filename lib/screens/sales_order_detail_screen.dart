@@ -7,6 +7,7 @@ import '../core/api_client.dart';
 import '../core/realtime_client.dart';
 import '../models/sales_order.dart';
 import '../services/auth_service.dart';
+import '../services/quotations_service.dart';
 import '../services/reference_cache.dart';
 import '../services/sales_orders_service.dart';
 import '../theme/app_spacing.dart';
@@ -17,6 +18,8 @@ import '../widgets/section_card.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/status_pill.dart';
 import '../l10n/generated/app_localizations.dart';
+import 'quotation_detail_screen.dart';
+import 'request_detail_screen.dart';
 
 class SalesOrderDetailScreen extends StatefulWidget {
   final int id;
@@ -30,6 +33,7 @@ class SalesOrderDetailScreen extends StatefulWidget {
 class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen> {
   late Future<SalesOrder> _future;
   bool _releasing = false;
+  bool _openingQuotation = false;
   String? _actionError;
   bool _flash = false;
 
@@ -106,6 +110,28 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen> {
     }
   }
 
+  Future<void> _openQuotation(String quotationNumber) async {
+    setState(() => _openingQuotation = true);
+    try {
+      final quotation = await context.read<QuotationsService>().findByNumber(quotationNumber);
+      if (!mounted) return;
+      if (quotation == null) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.relatedRecordsLoadQuotationFailed)));
+        return;
+      }
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => QuotationDetailScreen(quotation: quotation)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.relatedRecordsLoadQuotationFailed)));
+    } finally {
+      if (mounted) setState(() => _openingQuotation = false);
+    }
+  }
+
   String _warehouseName(int? id, AuthService auth, AppLocalizations l10n) {
     if (id == null) return '—';
     for (final w in auth.currentUser?.warehouses ?? const []) {
@@ -171,10 +197,35 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen> {
               _kvRow(l10n.salesOrderDetailQuotationLabel, Text(order.quotationNumber ?? '—')),
               _kvRow(l10n.salesOrderDetailOrderDateLabel, Text(order.orderDate ?? '—')),
               _kvRow(l10n.salesOrderDetailJdeOrderLabel, Text(order.jdeOrderNumber ?? '—')),
-              _kvRow(l10n.salesOrderDetailCreditLabel, StatusPill(value: order.creditStatus, dense: true)),
-              _kvRow(l10n.salesOrderDetailHoldLabel, StatusPill(value: order.hasActiveHold ? 'HOLD' : 'NONE', dense: true), isLast: true),
+              if (order.showCreditStatus)
+                _kvRow(l10n.salesOrderDetailCreditLabel, StatusPill(value: order.creditStatus, dense: true)),
+              if (order.hasActiveHold)
+                _kvRow(l10n.salesOrderDetailHoldLabel, StatusPill(value: 'HOLD', dense: true), isLast: true),
             ],
           ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            if (order.quotationNumber != null)
+              LoadingButton(
+                label: l10n.relatedRecordsViewQuotationButton,
+                variant: LoadingButtonVariant.outlined,
+                loading: _openingQuotation,
+                onPressed: () => _openQuotation(order.quotationNumber!),
+              ),
+            if (order.priceOfferRequestId != null)
+              LoadingButton(
+                label: l10n.relatedRecordsViewRequestButton,
+                variant: LoadingButtonVariant.outlined,
+                loading: false,
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => RequestDetailScreen(id: order.priceOfferRequestId!)),
+                ),
+              ),
+          ],
         ),
         if (order.parentSalesOrderId != null) ...[
           const SizedBox(height: AppSpacing.lg),

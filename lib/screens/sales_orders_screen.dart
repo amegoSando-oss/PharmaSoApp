@@ -309,8 +309,8 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> {
                                   spacing: 6,
                                   runSpacing: 6,
                                   children: [
-                                    StatusPill(value: row.creditStatus, dense: true),
-                                    StatusPill(value: row.hasActiveHold ? 'HOLD' : 'NONE', dense: true),
+                                    if (row.showCreditStatus) StatusPill(value: row.creditStatus, dense: true),
+                                    if (row.hasActiveHold) StatusPill(value: 'HOLD', dense: true),
                                     StatusPill(value: row.status, dense: true),
                                   ],
                                 ),

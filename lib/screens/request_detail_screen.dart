@@ -13,18 +13,19 @@ import '../l10n/generated/app_localizations.dart';
 import '../models/item.dart';
 import '../models/price_offer_request.dart';
 import '../models/quotation.dart';
-import '../services/auth_service.dart';
 import '../services/offers_service.dart';
+import '../services/quotations_service.dart';
 import '../services/reference_cache.dart';
 import '../theme/app_spacing.dart';
+import '../utils/related_records_nav.dart';
 import '../widgets/app_refresh_indicator.dart';
 import '../widgets/error_state.dart';
 import '../widgets/loading_button.dart';
 import '../widgets/section_card.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/status_pill.dart';
-import '../widgets/warehouse_picker_sheet.dart';
 import '../widgets/workflow_timeline.dart';
+import 'quotation_detail_screen.dart';
 
 class RequestDetailScreen extends StatefulWidget {
   final int id;
@@ -53,8 +54,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   ItemEntry? _newLineItem;
   final _newQuantityController = TextEditingController();
   final _newPriceController = TextEditingController();
-  final _newFocQuantityController = TextEditingController();
-  final _newFocUomController = TextEditingController();
+  final _newFocPercentController = TextEditingController();
 
   bool _pdfBusy = false;
   bool _flash = false;
@@ -85,8 +85,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     _editReasonController.dispose();
     _newQuantityController.dispose();
     _newPriceController.dispose();
-    _newFocQuantityController.dispose();
-    _newFocUomController.dispose();
+    _newFocPercentController.dispose();
     _flashTimer?.cancel();
     _unsubscribeLiveUpdate?.call();
     super.dispose();
@@ -206,8 +205,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               itemId: _newLineItem!.id,
               quantity: quantity,
               proposedPrice: price,
-              focQuantity: num.tryParse(_newFocQuantityController.text),
-              focUom: _newFocUomController.text.trim().isEmpty ? null : _newFocUomController.text.trim(),
+              focPercent: num.tryParse(_newFocPercentController.text),
             ),
           );
       setState(() {
@@ -215,8 +213,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         _newLineItem = null;
         _newQuantityController.clear();
         _newPriceController.clear();
-        _newFocQuantityController.clear();
-        _newFocUomController.clear();
+        _newFocPercentController.clear();
       });
       _reload();
     } on ApiException catch (e) {
@@ -228,11 +225,33 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     }
   }
 
-  Future<void> _createOrder(QuotationSummary quotation) async {
-    final assignedWarehouses = context.read<AuthService>().currentUser?.warehouses ?? const [];
-    final warehouse = await WarehousePickerSheet.show(context, assignedWarehouses);
-    if (warehouse == null || !mounted) return;
-    _performAction('order', () => context.read<OffersService>().createOrder(quotation.id, warehouseId: warehouse.id));
+  /// There's no single-quotation GET endpoint, so releasing lines into a
+  /// sales order needs the full [Quotation] (with its version/lines) fetched
+  /// by number first — this reuses [QuotationDetailScreen]'s per-line
+  /// release UI rather than duplicating it here with only a [QuotationSummary].
+  Future<void> _openQuotationForOrder(QuotationSummary quotation) async {
+    setState(() {
+      _busyAction = 'order';
+      _actionError = null;
+    });
+    try {
+      final full = await context.read<QuotationsService>().findByNumber(quotation.quotationNumber);
+      if (!mounted) return;
+      if (full == null) {
+        setState(() => _actionError = AppLocalizations.of(context).requestDetailActionFailedGeneric);
+        return;
+      }
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => QuotationDetailScreen(quotation: full)),
+      );
+      if (mounted) _reload();
+    } on ApiException catch (e) {
+      setState(() => _actionError = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _actionError = AppLocalizations.of(context).requestDetailActionFailedGeneric);
+    } finally {
+      if (mounted) setState(() => _busyAction = null);
+    }
   }
 
   Future<void> _downloadPdf(QuotationSummary quotation) async {
@@ -379,7 +398,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     final pillValue = isActive ? line.priceStatus : line.lineStatus;
     final minimumPrice = line.minimumPrice;
     final priceDifference = line.priceDifference;
-    final focQuantity = line.focQuantity;
+    final focPercent = line.focPercent;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -446,10 +465,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   (priceDifference != null ? l10n.requestDetailDiffSuffix(priceDifference) : ''),
                   style: const TextStyle(color: Colors.grey),
                 ),
-                if ((focQuantity ?? 0) > 0)
+                if ((focPercent ?? 0) > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text(l10n.requestDetailFocLine(focQuantity ?? 0, line.focUom ?? ''), style: const TextStyle(color: Colors.grey)),
+                    child: Text(l10n.requestDetailFocLine(focPercent ?? 0), style: const TextStyle(color: Colors.grey)),
                   ),
                 if (isActive && (detail.canEdit || detail.canRemoveItem))
                   Row(
@@ -536,23 +555,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _newFocQuantityController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(labelText: l10n.requestDetailFocQtyLabel),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: TextField(
-                  controller: _newFocUomController,
-                  decoration: InputDecoration(labelText: l10n.requestDetailFocUomLabel),
-                ),
-              ),
-            ],
+          TextField(
+            controller: _newFocPercentController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(labelText: l10n.requestDetailFocPercentLabel),
           ),
           const SizedBox(height: AppSpacing.sm),
           Row(
@@ -746,6 +752,18 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                 loading: _pdfBusy,
                 onPressed: () => _downloadPdf(quotation),
               ),
+              LoadingButton(
+                label: l10n.relatedRecordsViewQuotationButton,
+                variant: LoadingButtonVariant.outlined,
+                loading: _busyAction == 'order',
+                onPressed: _busyAction != null ? null : () => _openQuotationForOrder(quotation),
+              ),
+              LoadingButton(
+                label: l10n.relatedRecordsViewSalesOrderButton,
+                variant: LoadingButtonVariant.outlined,
+                loading: false,
+                onPressed: () => openSalesOrdersForQuotation(context, quotation.id),
+              ),
               if (detail.canSendQuotation)
                 LoadingButton(
                   label: l10n.requestDetailSendToCustomerButton,
@@ -758,7 +776,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                 LoadingButton(
                   label: l10n.requestDetailCreateSalesOrderButton,
                   loading: _busyAction == 'order',
-                  onPressed: _busyAction != null ? null : () => _createOrder(quotation),
+                  onPressed: _busyAction != null ? null : () => _openQuotationForOrder(quotation),
                 ),
             ],
           ),

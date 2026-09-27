@@ -6,8 +6,12 @@ class SalesOrdersService {
 
   SalesOrdersService(this.apiClient);
 
-  Future<List<SalesOrder>> listOrders({int page = 1}) async {
-    final payload = await apiClient.get('/sales-orders', params: {'page': page, 'per_page': 50});
+  Future<List<SalesOrder>> listOrders({int page = 1, int? quotationId}) async {
+    final payload = await apiClient.get('/sales-orders', params: {
+      'page': page,
+      'per_page': 50,
+      if (quotationId != null) 'quotation_id': quotationId,
+    });
     final data = (payload['data'] as List?) ?? const [];
     return data.map((o) => SalesOrder.fromJson(o as Map<String, dynamic>)).toList();
   }

@@ -16,6 +16,17 @@ class Customer {
     this.salesmen = const [],
   });
 
+  /// Mirrors RequestComposer.js's `salesmen` computed property: the first
+  /// currently-active assignment (JDE may list the same customer/salesman
+  /// pair more than once, one row per item group) — null when the customer
+  /// has no active salesman assignment at all.
+  Salesman? get activeSalesman {
+    for (final salesman in salesmen) {
+      if (salesman.isActiveToday) return salesman;
+    }
+    return null;
+  }
+
   factory Customer.fromJson(Map<String, dynamic> json) {
     final salesmenJson = (json['salesmen'] as List?) ?? const [];
     return Customer(

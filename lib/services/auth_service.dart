@@ -49,9 +49,14 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> login(String login, String password) async {
     final payload = await apiClient.post('/auth/token', body: {
-      'email': email,
+      // IssueTokenRequest validates a `login` field, not `email` —
+      // TokenService::issue() resolves it against username, email, or
+      // phone, whichever it turns out to be. Sending `email` here made
+      // `login` always missing, so every attempt failed 422 regardless of
+      // the credentials entered.
+      'login': login,
       'password': password,
       'name': 'mobile-app',
     });

@@ -13,6 +13,7 @@ import '../theme/app_spacing.dart';
 import '../widgets/app_refresh_indicator.dart';
 import '../widgets/error_state.dart';
 import '../widgets/info_tile.dart';
+import '../widgets/item_picker_sheet.dart';
 import '../widgets/loading_button.dart';
 import '../widgets/person_tile.dart';
 import '../widgets/section_card.dart';
@@ -25,20 +26,11 @@ class _LineForm {
   List<WarehouseItemStock> stock = [];
   bool stockLoading = false;
   String? stockError;
-  bool focEnabled = false;
   final quantityController = TextEditingController();
   final priceController = TextEditingController();
-  final focQuantityController = TextEditingController();
-  final focUomController = TextEditingController();
-  // Owned explicitly (rather than left for Autocomplete to create its own)
-  // so onSelected can unfocus it — otherwise the field keeps focus after
-  // picking an item, and its suggestions overlay can resurface later
-  // whenever the keyboard for a *different* field (e.g. Proposed price)
-  // shifts the layout and repositions it back into view. RawAutocomplete
-  // requires focusNode and textEditingController to be supplied together
-  // (or not at all), so itemTextController comes as a pair with it.
-  final itemFocusNode = FocusNode();
-  final itemTextController = TextEditingController();
+  // Informational flag only for the approver (0-100) — mirrors web's
+  // foc_percent; never a quantity/UOM (see OfferLineInput's doc comment).
+  final focPercentController = TextEditingController();
 
   /// A line the user hasn't touched at all — untouched default lines (the
   /// form starts with 3) are silently dropped on submit rather than
@@ -48,10 +40,7 @@ class _LineForm {
   void dispose() {
     quantityController.dispose();
     priceController.dispose();
-    focQuantityController.dispose();
-    focUomController.dispose();
-    itemFocusNode.dispose();
-    itemTextController.dispose();
+    focPercentController.dispose();
   }
 }
 
@@ -148,13 +137,25 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
   /// minimum price / UOM / pack / INC-rate for the selected item as soon as
   /// it's picked, so the salesman sees pricing guidance before typing a
   /// proposed price — purely advisory, the server re-validates on submit.
+  /// Also mirrors its price defaulting: fills the proposed price with the
+  /// guidance's effective price (price_after_tax, falling back to
+  /// min_price_pc) the first time guidance loads for this line, but only
+  /// while the field is still empty — never overwrites a price the user
+  /// already typed (e.g. re-picking the same item, or a slow response
+  /// landing after they've started editing).
   Future<void> _refreshGuidance(_LineForm line) async {
     if (line.item == null || _activePriceList == null) return;
     setState(() => line.guidanceLoading = true);
     try {
       final results = await context.read<OffersService>().fetchEffectivePrices(_activePriceList!.id, itemId: line.item!.id);
       if (!mounted) return;
-      setState(() => line.guidance = results.isNotEmpty ? results.first : null);
+      setState(() {
+        line.guidance = results.isNotEmpty ? results.first : null;
+        final defaultPrice = line.guidance?.effectivePrice;
+        if (defaultPrice != null && line.priceController.text.trim().isEmpty) {
+          line.priceController.text = defaultPrice.toStringAsFixed(2);
+        }
+      });
     } catch (_) {
       if (mounted) setState(() => line.guidance = null);
     } finally {
@@ -192,12 +193,13 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
     return qty * price;
   }
 
-  /// Proposed price vs the price list's guidance (min_price_pc), as a
+  /// Proposed price vs the price list's guidance (the same effective price
+  /// used to gate BELOW_MINIMUM/AT_MINIMUM/ABOVE_MINIMUM server-side), as a
   /// signed percentage — shown as a stock-ticker-style arrow next to the
   /// price field. Null (hidden) until there's both an active guidance price
   /// and a parseable proposed price to compare it against.
   num? _priceChangePercent(_LineForm line) {
-    final guidancePrice = line.guidance?.minPricePc;
+    final guidancePrice = line.guidance?.effectivePrice;
     final proposedPrice = num.tryParse(line.priceController.text);
     if (guidancePrice == null || guidancePrice == 0 || proposedPrice == null) return null;
     return (proposedPrice - guidancePrice) / guidancePrice * 100;
@@ -207,11 +209,8 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
 
   /// Quantity/price controllers across every line, merged so the bottom
   /// summary bar and the "why can't I submit" hint can rebuild live as the
-  /// user types — without also rebuilding the whole line-card list (and,
-  /// with it, every item Autocomplete) on every keystroke like a top-level
-  /// setState would. That full-form rebuild was what caused the item
-  /// search suggestions to unexpectedly reopen while typing in an unrelated
-  /// field (Proposed price) on a different line.
+  /// user types — without also rebuilding the whole line-card list on every
+  /// keystroke like a top-level setState would.
   Listenable get _priceInputsListenable =>
       Listenable.merge(_lines.expand((l) => [l.quantityController, l.priceController]).toList());
 
@@ -225,7 +224,7 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
     num actualTotal = 0;
     bool hasAny = false;
     for (final line in _lines) {
-      final guidancePrice = line.guidance?.minPricePc;
+      final guidancePrice = line.guidance?.effectivePrice;
       final qty = num.tryParse(line.quantityController.text);
       final proposedPrice = num.tryParse(line.priceController.text);
       if (guidancePrice == null || qty == null || proposedPrice == null) continue;
@@ -245,7 +244,7 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
   String? get _blockingReason {
     final l10n = AppLocalizations.of(context);
     if (_selectedCustomer == null) return l10n.createOfferSelectCustomer;
-    if (_selectedCustomer!.salesmen.isEmpty) return l10n.createOfferNoSalesman;
+    if (_selectedCustomer!.activeSalesman == null) return l10n.createOfferNoSalesman;
     if (_activePriceList == null) return l10n.createOfferNoActivePriceList;
     bool hasFilledLine = false;
     for (int i = 0; i < _lines.length; i++) {
@@ -264,6 +263,22 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
   bool get _canSubmit => !_saving && _blockingReason == null;
 
   void _addLine() => setState(() => _lines.add(_LineForm()));
+
+  /// Mirrors RequestComposer.js's item picker: a searchable modal scoped to
+  /// the customer's active salesman, rather than filtering a fixed local
+  /// list — see ItemPickerSheet's doc comment.
+  Future<void> _pickItem(_LineForm line) async {
+    final picked = await ItemPickerSheet.show(
+      context,
+      localItems: _items,
+      salesmanId: _selectedCustomer?.activeSalesman?.id,
+      offers: context.read<OffersService>(),
+    );
+    if (picked == null) return;
+    setState(() => line.item = picked);
+    _refreshGuidance(line);
+    _loadLineStock(line);
+  }
 
   Future<void> _submit() async {
     if (!_canSubmit) return;
@@ -284,15 +299,14 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
       final offers = context.read<OffersService>();
       await offers.createRequest(
         customerId: _selectedCustomer!.id,
-        salesmanId: _selectedCustomer!.salesmen.first.id,
+        salesmanId: _selectedCustomer!.activeSalesman!.id,
         priceListId: _activePriceList!.id,
         lines: _lines
             .map((l) => OfferLineInput(
                   itemId: l.item!.id,
                   quantity: num.parse(l.quantityController.text),
                   proposedPrice: num.parse(l.priceController.text),
-                  focQuantity: num.tryParse(l.focQuantityController.text),
-                  focUom: l.focUomController.text.trim().isEmpty ? null : l.focUomController.text.trim(),
+                  focPercent: num.tryParse(l.focPercentController.text),
                 ))
             .toList(),
       );
@@ -351,8 +365,8 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
                     const SizedBox(height: AppSpacing.md),
                     PersonTile(
                       label: l10n.createOfferAssignedSalesmanLabel,
-                      name: _selectedCustomer?.salesmen.isNotEmpty == true ? _selectedCustomer!.salesmen.first.name : null,
-                      code: _selectedCustomer?.salesmen.isNotEmpty == true ? _selectedCustomer!.salesmen.first.code : null,
+                      name: _selectedCustomer?.activeSalesman?.name,
+                      code: _selectedCustomer?.activeSalesman?.code,
                       placeholder: _selectedCustomer == null
                           ? l10n.createOfferSelectCustomerFirst
                           : l10n.createOfferNoActiveSalesmanAssignment,
@@ -500,38 +514,21 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
                 ),
             ],
           ),
-          Autocomplete<ItemEntry>(
-            focusNode: line.itemFocusNode,
-            textEditingController: line.itemTextController,
-            displayStringForOption: (item) => item.displayName,
-            optionsBuilder: (value) {
-              if (value.text.isEmpty) return _items.take(20);
-              final query = value.text.toLowerCase();
-              return _items.where((item) =>
-                  item.name.toLowerCase().contains(query) ||
-                  (item.jdeItemNumber?.toLowerCase().contains(query) ?? false));
-            },
-            onSelected: (item) {
-              setState(() => line.item = item);
-              _refreshGuidance(line);
-              _loadLineStock(line);
-              // See itemFocusNode's doc comment on _LineForm.
-              line.itemFocusNode.unfocus();
-            },
-            fieldViewBuilder: (context, controller, focusNode, onSubmit) {
-              if (line.item != null && controller.text != line.item!.displayName) {
-                controller.text = line.item!.displayName;
-              }
-              return TextField(
-                controller: controller,
-                focusNode: focusNode,
-                decoration: InputDecoration(
-                  labelText: l10n.createOfferItemLabel,
-                  hintText: l10n.createOfferItemSearchHint,
-                  prefixIcon: const Icon(Icons.search),
-                ),
-              );
-            },
+          InkWell(
+            borderRadius: BorderRadius.circular(4),
+            onTap: () => _pickItem(line),
+            child: InputDecorator(
+              decoration: InputDecoration(
+                labelText: l10n.createOfferItemLabel,
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: const Icon(Icons.arrow_drop_down),
+              ),
+              child: Text(
+                line.item?.displayName ?? l10n.createOfferItemSearchHint,
+                overflow: TextOverflow.ellipsis,
+                style: line.item == null ? TextStyle(color: theme.colorScheme.outline) : null,
+              ),
+            ),
           ),
           if (line.item != null) ...[
             const SizedBox(height: AppSpacing.sm),
@@ -547,8 +544,11 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
                 children: [
                   _GuidanceChip(
                     label: line.guidance!.isUpcoming ? l10n.createOfferGuidanceUpcoming : l10n.createOfferGuidanceMin,
-                    value: line.guidance!.minPricePc?.toStringAsFixed(2) ?? '—',
+                    value: line.guidance!.effectivePrice?.toStringAsFixed(2) ?? '—',
                   ),
+                  _GuidanceChip(
+                      label: l10n.createOfferGuidanceBeforeTax,
+                      value: line.guidance!.priceBeforeTax?.toStringAsFixed(2) ?? '—'),
                   _GuidanceChip(label: l10n.createOfferGuidanceUom, value: line.guidance!.uom ?? '—'),
                   _GuidanceChip(
                     label: l10n.createOfferGuidancePack,
@@ -557,6 +557,8 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
                   _GuidanceChip(
                       label: l10n.createOfferGuidanceMinPricePerUnit,
                       value: line.guidance!.minPriceUnit?.toStringAsFixed(2) ?? '—'),
+                  if (line.guidance!.includeTax)
+                    _GuidanceChip(label: l10n.createOfferGuidanceTax, value: '${line.guidance!.taxRate ?? 0}%'),
                   _GuidanceChip(label: l10n.createOfferGuidanceInc, value: '${line.guidance!.incRate ?? 0}%'),
                   if (line.guidance!.isUpcoming)
                     _GuidanceChip(label: l10n.createOfferGuidanceStarts, value: line.guidance!.effectiveFrom ?? '—', warn: true),
@@ -571,10 +573,8 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
             _WarehouseStockSection(line: line),
           ],
           const SizedBox(height: AppSpacing.sm),
-          // Scoped to just this line's own controllers — typing here must
-          // not rebuild the item Autocomplete above (on this line or any
-          // other), which is what caused the item search suggestions to
-          // reopen unexpectedly while typing a proposed price.
+          // Scoped to just this line's own quantity/price controllers, so
+          // typing here doesn't rebuild every other line on the screen.
           // The Quantity/Proposed price Row must stay at a *fixed* position
           // in this Column — with no keys, Flutter reconciles children by
           // index, so an `if (...) ...[widget]` sibling appearing/
@@ -632,44 +632,15 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
             },
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: Text(l10n.createOfferFocLabel, style: theme.textTheme.bodyMedium),
-              ),
-              Switch(
-                value: line.focEnabled,
-                onChanged: (enabled) => setState(() {
-                  line.focEnabled = enabled;
-                  if (!enabled) {
-                    line.focQuantityController.clear();
-                    line.focUomController.clear();
-                  }
-                }),
-              ),
-            ],
-          ),
-          if (line.focEnabled) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: line.focQuantityController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(labelText: l10n.createOfferFocQuantityLabel),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: TextField(
-                    controller: line.focUomController,
-                    decoration: InputDecoration(labelText: l10n.createOfferFocUomLabel),
-                  ),
-                ),
-              ],
+          TextField(
+            controller: line.focPercentController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: l10n.createOfferFocPercentLabel,
+              helperText: l10n.createOfferFocHelperText,
+              helperMaxLines: 3,
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -799,7 +770,7 @@ class _WarehouseStockSection extends StatelessWidget {
           )
         else
           SizedBox(
-            height: 92,
+            height: 98,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: line.stock.length,
@@ -835,6 +806,7 @@ class _WarehouseStockCard extends StatelessWidget {
           Text(
             stock.warehouseName ?? l10n.createOfferWarehouseFallback(stock.warehouseId),
             style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 6),
@@ -848,6 +820,7 @@ class _WarehouseStockCard extends StatelessWidget {
           Text(
             l10n.createOfferOnHandCommitted(stock.onHandQty, stock.committedQty),
             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline, fontSize: 10),
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
         ],

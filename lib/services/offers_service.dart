@@ -14,23 +14,43 @@ class OfferLineInput {
   final int itemId;
   final num quantity;
   final num proposedPrice;
-  final num? focQuantity;
-  final String? focUom;
+  // Matches StorePriceOfferRequest/AddPriceOfferLineRequest: the only FOC
+  // field either endpoint accepts on a line is foc_percent (0-100) — an
+  // informational flag for the approver, never a quantity/UOM (those
+  // aren't validated fields on price_offer_request_lines' create path and
+  // are silently dropped by PriceOfferLineData::fromArray() if sent).
+  final num? focPercent;
 
   OfferLineInput({
     required this.itemId,
     required this.quantity,
     required this.proposedPrice,
-    this.focQuantity,
-    this.focUom,
+    this.focPercent,
   });
 
   Map<String, dynamic> toJson() => {
         'item_id': itemId,
         'quantity': quantity,
         'proposed_price': proposedPrice,
-        if (focQuantity != null && focQuantity! > 0) 'foc_quantity': focQuantity,
-        if (focUom != null && focUom!.isNotEmpty) 'foc_uom': focUom,
+        if (focPercent != null && focPercent! > 0) 'foc_percent': focPercent,
+      };
+}
+
+/// One line released into a sales order, matching what
+/// SalesOrderService::create() expects per entry in `lines[]`: which
+/// quotation line, from which warehouse, and how much of its remaining
+/// quantity (omit to release everything left on the line).
+class OrderReleaseLine {
+  final int lineId;
+  final int warehouseId;
+  final num quantity;
+
+  OrderReleaseLine({required this.lineId, required this.warehouseId, required this.quantity});
+
+  Map<String, dynamic> toJson() => {
+        'line_id': lineId,
+        'warehouse_id': warehouseId,
+        'quantity': quantity,
       };
 }
 
@@ -57,10 +77,16 @@ class OffersService {
     return data.map((p) => PriceListEntry.fromJson(p as Map<String, dynamic>)).toList();
   }
 
-  Future<List<ItemEntry>> fetchItems({String? search}) async {
+  /// Scoped to [salesmanId] when given (the offer composer always knows the
+  /// customer's active salesman by the time an item is being picked) — the
+  /// server then only returns items authorized via that rep's category
+  /// mapping (mirrors RequestComposer.js's `api.items({ salesman_id })`),
+  /// so the picker never offers an item the server would reject on submit.
+  Future<List<ItemEntry>> fetchItems({String? search, int? salesmanId}) async {
     final payload = await apiClient.get('/items', params: {
       'per_page': 50,
       if (search != null && search.isNotEmpty) 'search': search,
+      'salesman_id': ?salesmanId,
     });
     final data = (payload['data'] as List?) ?? const [];
     return data.map((i) => ItemEntry.fromJson(i as Map<String, dynamic>)).toList();
@@ -171,9 +197,23 @@ class OffersService {
     return apiClient.getBytes('/quotations/$quotationId/download');
   }
 
-  Future<void> createOrder(int quotationId, {required int warehouseId}) async {
+  /// Whether the quotation-settings admin has enabled partial release —
+  /// public/read-only, any authenticated user can check it (mirrors
+  /// QuotationsView.js's `loadQuotationSettings`). Decides whether the
+  /// release UI lets the quantity be edited per line or must release each
+  /// releasable line at its full remaining quantity.
+  Future<bool> fetchPartialReleaseEnabled() async {
+    final payload = await apiClient.get('/quotation-settings');
+    final data = (payload['data'] as Map?) ?? const {};
+    return data['partial_release_enabled'] == true;
+  }
+
+  /// Releases some or all of a quotation's still-open lines into a new (or
+  /// existing, if already partially converted) sales order — see
+  /// SalesOrderService::create(). [lines] must be non-empty.
+  Future<void> createOrder(int quotationId, {required List<OrderReleaseLine> lines}) async {
     await apiClient.post('/quotations/$quotationId/order', prefix: 'order-create', body: {
-      'warehouse_id': warehouseId,
+      'lines': lines.map((l) => l.toJson()).toList(),
     });
   }
 }

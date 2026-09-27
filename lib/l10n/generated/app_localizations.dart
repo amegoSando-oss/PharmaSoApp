@@ -683,8 +683,20 @@ abstract class AppLocalizations {
   /// No description provided for @createOfferGuidanceMin.
   ///
   /// In en, this message translates to:
-  /// **'Min'**
+  /// **'Min (after tax)'**
   String get createOfferGuidanceMin;
+
+  /// No description provided for @createOfferGuidanceBeforeTax.
+  ///
+  /// In en, this message translates to:
+  /// **'Before tax'**
+  String get createOfferGuidanceBeforeTax;
+
+  /// No description provided for @createOfferGuidanceTax.
+  ///
+  /// In en, this message translates to:
+  /// **'Tax'**
+  String get createOfferGuidanceTax;
 
   /// No description provided for @createOfferGuidanceUom.
   ///
@@ -734,23 +746,17 @@ abstract class AppLocalizations {
   /// **'Proposed price'**
   String get createOfferProposedPriceLabel;
 
-  /// No description provided for @createOfferFocLabel.
+  /// No description provided for @createOfferFocPercentLabel.
   ///
   /// In en, this message translates to:
-  /// **'Free of charge (FOC)'**
-  String get createOfferFocLabel;
+  /// **'FOC %'**
+  String get createOfferFocPercentLabel;
 
-  /// No description provided for @createOfferFocQuantityLabel.
+  /// No description provided for @createOfferFocHelperText.
   ///
   /// In en, this message translates to:
-  /// **'FOC qty'**
-  String get createOfferFocQuantityLabel;
-
-  /// No description provided for @createOfferFocUomLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'FOC UOM'**
-  String get createOfferFocUomLabel;
+  /// **'Flags this line for the approver — does not change price or quantity. The approver adds a separate, price-0 line for the actual free goods.'**
+  String get createOfferFocHelperText;
 
   /// No description provided for @createOfferStockDisclaimer.
   ///
@@ -1071,8 +1077,8 @@ abstract class AppLocalizations {
   /// No description provided for @requestDetailFocLine.
   ///
   /// In en, this message translates to:
-  /// **'FOC {focQuantity} {focUom}'**
-  String requestDetailFocLine(Object focQuantity, Object focUom);
+  /// **'FOC {focPercent}%'**
+  String requestDetailFocLine(Object focPercent);
 
   /// No description provided for @requestDetailEditButton.
   ///
@@ -1098,17 +1104,11 @@ abstract class AppLocalizations {
   /// **'Item'**
   String get requestDetailItemLabel;
 
-  /// No description provided for @requestDetailFocQtyLabel.
+  /// No description provided for @requestDetailFocPercentLabel.
   ///
   /// In en, this message translates to:
-  /// **'FOC qty (optional)'**
-  String get requestDetailFocQtyLabel;
-
-  /// No description provided for @requestDetailFocUomLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'FOC UOM (optional)'**
-  String get requestDetailFocUomLabel;
+  /// **'FOC % (optional)'**
+  String get requestDetailFocPercentLabel;
 
   /// No description provided for @requestDetailNoActionsDraft.
   ///
@@ -1223,6 +1223,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create sales order'**
   String get requestDetailCreateSalesOrderButton;
+
+  /// No description provided for @relatedRecordsViewQuotationButton.
+  ///
+  /// In en, this message translates to:
+  /// **'View quotation'**
+  String get relatedRecordsViewQuotationButton;
+
+  /// No description provided for @relatedRecordsViewSalesOrderButton.
+  ///
+  /// In en, this message translates to:
+  /// **'View sales order'**
+  String get relatedRecordsViewSalesOrderButton;
+
+  /// No description provided for @relatedRecordsViewRequestButton.
+  ///
+  /// In en, this message translates to:
+  /// **'View request'**
+  String get relatedRecordsViewRequestButton;
+
+  /// No description provided for @relatedRecordsNoSalesOrderYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No sales order yet'**
+  String get relatedRecordsNoSalesOrderYet;
+
+  /// No description provided for @relatedRecordsSelectSalesOrderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select sales order'**
+  String get relatedRecordsSelectSalesOrderTitle;
+
+  /// No description provided for @relatedRecordsLoadOrdersFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load sales orders. Please try again.'**
+  String get relatedRecordsLoadOrdersFailed;
+
+  /// No description provided for @relatedRecordsLoadQuotationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load the quotation. Please try again.'**
+  String get relatedRecordsLoadQuotationFailed;
 
   /// No description provided for @requestDetailActionFailedGeneric.
   ///
@@ -1440,11 +1482,74 @@ abstract class AppLocalizations {
   /// **'Send to customer'**
   String get quotationDetailSendButton;
 
-  /// No description provided for @quotationDetailCreateOrderButton.
+  /// No description provided for @quotationDetailReleasedRemainingLine.
   ///
   /// In en, this message translates to:
-  /// **'Create sales order'**
-  String get quotationDetailCreateOrderButton;
+  /// **'Released {released} · Remaining {remaining}'**
+  String quotationDetailReleasedRemainingLine(
+    Object released,
+    Object remaining,
+  );
+
+  /// No description provided for @quotationDetailReleaseSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Release into a sales order'**
+  String get quotationDetailReleaseSectionTitle;
+
+  /// No description provided for @quotationDetailReleaseNotePartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Release any part of a line\'s remaining quantity — the rest stays open on the quotation for a later release.'**
+  String get quotationDetailReleaseNotePartial;
+
+  /// No description provided for @quotationDetailReleaseNoteFullOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial release is disabled — every open line releases together, at its full remaining quantity, in one sales order.'**
+  String get quotationDetailReleaseNoteFullOnly;
+
+  /// No description provided for @quotationDetailNoReleasableLines.
+  ///
+  /// In en, this message translates to:
+  /// **'Every line is fully released — nothing left to release.'**
+  String get quotationDetailNoReleasableLines;
+
+  /// No description provided for @quotationDetailRemainingLabelValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining {remaining} {uom}'**
+  String quotationDetailRemainingLabelValue(Object remaining, Object uom);
+
+  /// No description provided for @quotationDetailReleaseQtyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Release qty'**
+  String get quotationDetailReleaseQtyLabel;
+
+  /// No description provided for @quotationDetailWarehouseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Warehouse'**
+  String get quotationDetailWarehouseLabel;
+
+  /// No description provided for @quotationDetailFillFullRemainingButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill full remaining quantity'**
+  String get quotationDetailFillFullRemainingButton;
+
+  /// No description provided for @quotationDetailReleaseButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Release into sales order'**
+  String get quotationDetailReleaseButton;
+
+  /// No description provided for @quotationDetailReleaseButtonFullOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Release full quotation into sales order'**
+  String get quotationDetailReleaseButtonFullOnly;
 
   /// No description provided for @salesOrdersTitle.
   ///
@@ -1761,29 +1866,23 @@ abstract class AppLocalizations {
   /// **'Try again'**
   String get widgetsTryAgainButton;
 
-  /// No description provided for @widgetsSelectWarehouseTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Select fulfillment warehouse'**
-  String get widgetsSelectWarehouseTitle;
-
-  /// No description provided for @widgetsSelectWarehouseSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'The sales order will be created against this warehouse.'**
-  String get widgetsSelectWarehouseSubtitle;
-
-  /// No description provided for @widgetsNoWarehousesAssignedMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'You have no assigned warehouses to select from. Contact your administrator to get one assigned.'**
-  String get widgetsNoWarehousesAssignedMessage;
-
   /// No description provided for @widgetsRejectedReason.
   ///
   /// In en, this message translates to:
   /// **'Rejected: {reason}'**
   String widgetsRejectedReason(Object reason);
+
+  /// No description provided for @itemPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select item'**
+  String get itemPickerTitle;
+
+  /// No description provided for @itemPickerNoMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching items'**
+  String get itemPickerNoMatches;
 }
 
 class _AppLocalizationsDelegate
