@@ -11,10 +11,12 @@ import '../models/warehouse_item_stock.dart';
 import '../services/offers_service.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/app_refresh_indicator.dart';
+import '../widgets/connection_status_badge.dart';
 import '../widgets/error_state.dart';
 import '../widgets/info_tile.dart';
 import '../widgets/item_picker_sheet.dart';
 import '../widgets/loading_button.dart';
+import '../widgets/notification_bell.dart';
 import '../widgets/person_tile.dart';
 import '../widgets/section_card.dart';
 import '../widgets/skeleton_loader.dart';
@@ -327,7 +329,10 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context).createOfferTitle)),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context).createOfferTitle),
+        actions: const [ConnectionStatusBadge(), NotificationBell()],
+      ),
       body: _loading
           ? const SkeletonOfferForm()
           : _loadError != null

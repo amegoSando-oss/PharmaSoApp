@@ -103,18 +103,6 @@ class HomeScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (user.roleNames.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      user.roleNames.first,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                  ),
               ],
             ),
           const SizedBox(height: AppSpacing.xl),

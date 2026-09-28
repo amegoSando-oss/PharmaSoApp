@@ -12,8 +12,10 @@ import '../services/offers_service.dart';
 import '../services/reference_cache.dart';
 import '../theme/app_spacing.dart';
 import '../utils/related_records_nav.dart';
+import '../widgets/connection_status_badge.dart';
 import '../widgets/error_state.dart';
 import '../widgets/loading_button.dart';
+import '../widgets/notification_bell.dart';
 import '../widgets/section_card.dart';
 import '../widgets/status_pill.dart';
 import '../l10n/generated/app_localizations.dart';
@@ -181,7 +183,10 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
     final assignedWarehouses = context.read<AuthService>().currentUser?.warehouses ?? const [];
 
     return Scaffold(
-      appBar: AppBar(title: Text(quotation.quotationNumber)),
+      appBar: AppBar(
+        title: Text(quotation.quotationNumber),
+        actions: const [ConnectionStatusBadge(), NotificationBell()],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 96),
         children: [

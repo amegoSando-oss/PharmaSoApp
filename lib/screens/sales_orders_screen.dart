@@ -14,6 +14,7 @@ import '../theme/app_spacing.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
 import '../widgets/app_refresh_indicator.dart';
+import '../widgets/connection_status_badge.dart';
 import '../widgets/notification_bell.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/status_pill.dart';
@@ -166,7 +167,10 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.salesOrdersTitle), actions: const [NotificationBell()]),
+      appBar: AppBar(
+        title: Text(l10n.salesOrdersTitle),
+        actions: const [ConnectionStatusBadge(), NotificationBell()],
+      ),
       body: Column(
         children: [
           Padding(

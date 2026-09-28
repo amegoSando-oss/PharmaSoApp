@@ -12,8 +12,10 @@ import '../services/reference_cache.dart';
 import '../services/sales_orders_service.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/app_refresh_indicator.dart';
+import '../widgets/connection_status_badge.dart';
 import '../widgets/error_state.dart';
 import '../widgets/loading_button.dart';
+import '../widgets/notification_bell.dart';
 import '../widgets/section_card.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/status_pill.dart';
@@ -145,7 +147,10 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.salesOrderDetailTitle)),
+      appBar: AppBar(
+        title: Text(l10n.salesOrderDetailTitle),
+        actions: const [ConnectionStatusBadge(), NotificationBell()],
+      ),
       body: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         color: _flash ? theme.colorScheme.primaryContainer.withValues(alpha: 0.35) : Colors.transparent,

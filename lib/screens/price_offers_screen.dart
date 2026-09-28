@@ -15,6 +15,7 @@ import '../services/reference_cache.dart';
 import '../theme/app_spacing.dart';
 import '../theme/status_style.dart';
 import '../widgets/app_refresh_indicator.dart';
+import '../widgets/connection_status_badge.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
 import '../widgets/loading_button.dart';
@@ -204,7 +205,10 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> {
     final reference = context.watch<ReferenceCache>();
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.priceOffersTitle), actions: const [NotificationBell()]),
+      appBar: AppBar(
+        title: Text(l10n.priceOffersTitle),
+        actions: const [ConnectionStatusBadge(), NotificationBell()],
+      ),
       body: Column(
         children: [
           Padding(
