@@ -314,6 +314,24 @@ abstract class AppLocalizations {
   /// **'Orders'**
   String get homeOrdersAction;
 
+  /// No description provided for @homeStatsOpenRequestsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Open requests'**
+  String get homeStatsOpenRequestsLabel;
+
+  /// No description provided for @homeStatsPendingQuotationsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending quotations'**
+  String get homeStatsPendingQuotationsLabel;
+
+  /// No description provided for @homeStatsDraftPriceOffersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft price offers'**
+  String get homeStatsDraftPriceOffersLabel;
+
   /// No description provided for @statusApproved.
   ///
   /// In en, this message translates to:

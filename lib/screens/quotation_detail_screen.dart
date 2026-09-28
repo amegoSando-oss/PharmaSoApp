@@ -9,9 +9,11 @@ import '../core/api_client.dart';
 import '../models/quotation.dart';
 import '../services/auth_service.dart';
 import '../services/offers_service.dart';
+import '../services/quotations_service.dart';
 import '../services/reference_cache.dart';
 import '../theme/app_spacing.dart';
 import '../utils/related_records_nav.dart';
+import '../widgets/app_refresh_indicator.dart';
 import '../widgets/connection_status_badge.dart';
 import '../widgets/error_state.dart';
 import '../widgets/loading_button.dart';
@@ -34,6 +36,7 @@ class QuotationDetailScreen extends StatefulWidget {
 }
 
 class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
+  late Quotation _quotation;
   String? _busyAction;
   String? _actionError;
   bool _pdfBusy = false;
@@ -46,7 +49,22 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _quotation = widget.quotation;
     _loadReleaseSettings();
+  }
+
+  /// Same "no GET-by-id" limitation as everywhere else that opens a
+  /// quotation — a pull-to-refresh has to re-resolve it by number.
+  Future<void> _refresh() async {
+    try {
+      final updated = await context.read<QuotationsService>().findByNumber(
+        _quotation.quotationNumber,
+      );
+      if (!mounted || updated == null) return;
+      setState(() => _quotation = updated);
+    } catch (_) {
+      // AppRefreshIndicator just needs the Future to complete either way.
+    }
   }
 
   @override
@@ -58,13 +76,18 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
   }
 
   Future<void> _loadReleaseSettings() async {
-    final canRelease = ['ACCEPTED', 'PARTIALLY_CONVERTED'].contains(widget.quotation.status);
+    final canRelease = [
+      'ACCEPTED',
+      'PARTIALLY_CONVERTED',
+    ].contains(widget.quotation.status);
     if (!canRelease) {
       setState(() => _settingsLoading = false);
       return;
     }
     try {
-      final enabled = await context.read<OffersService>().fetchPartialReleaseEnabled();
+      final enabled = await context
+          .read<OffersService>()
+          .fetchPartialReleaseEnabled();
       if (!mounted) return;
       setState(() {
         _partialReleaseEnabled = enabled;
@@ -108,19 +131,31 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
           ? (num.tryParse(_qtyControllers[line.id]?.text ?? '') ?? 0)
           : line.remainingQuantity;
       if (quantity <= 0) continue;
-      lines.add(OrderReleaseLine(lineId: line.id, warehouseId: warehouseId, quantity: quantity));
+      lines.add(
+        OrderReleaseLine(
+          lineId: line.id,
+          warehouseId: warehouseId,
+          quantity: quantity,
+        ),
+      );
     }
     if (lines.isEmpty) return;
     await _performAction(
       'order',
-      () => context.read<OffersService>().createOrder(widget.quotation.id, lines: lines),
+      () => context.read<OffersService>().createOrder(
+        widget.quotation.id,
+        lines: lines,
+      ),
     );
     if (mounted && _actionError == null) {
       Navigator.of(context).pop();
     }
   }
 
-  Future<void> _performAction(String action, Future<void> Function() call) async {
+  Future<void> _performAction(
+    String action,
+    Future<void> Function() call,
+  ) async {
     setState(() {
       _busyAction = action;
       _actionError = null;
@@ -129,12 +164,18 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
       await call();
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_successMessageFor(l10n, action))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_successMessageFor(l10n, action))),
+        );
       }
     } on ApiException catch (e) {
       setState(() => _actionError = e.message);
     } catch (_) {
-      setState(() => _actionError = AppLocalizations.of(context).quotationDetailActionFailedMessage);
+      setState(
+        () => _actionError = AppLocalizations.of(
+          context,
+        ).quotationDetailActionFailedMessage,
+      );
     } finally {
       if (mounted) setState(() => _busyAction = null);
     }
@@ -157,7 +198,9 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
       _actionError = null;
     });
     try {
-      final bytes = await context.read<OffersService>().quotationPdfBytes(widget.quotation.id);
+      final bytes = await context.read<OffersService>().quotationPdfBytes(
+        widget.quotation.id,
+      );
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/${widget.quotation.quotationNumber}.pdf');
       await file.writeAsBytes(bytes, flush: true);
@@ -165,7 +208,11 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
     } on ApiException catch (e) {
       setState(() => _actionError = e.message);
     } catch (_) {
-      setState(() => _actionError = AppLocalizations.of(context).quotationDetailPdfDownloadFailedMessage);
+      setState(
+        () => _actionError = AppLocalizations.of(
+          context,
+        ).quotationDetailPdfDownloadFailedMessage,
+      );
     } finally {
       if (mounted) setState(() => _pdfBusy = false);
     }
@@ -176,241 +223,345 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
     final theme = Theme.of(context);
     final reference = context.watch<ReferenceCache>();
     final l10n = AppLocalizations.of(context);
-    final quotation = widget.quotation;
+    final quotation = _quotation;
     final lines = quotation.currentVersion?.lines ?? const [];
-    final releasableLines = quotation.currentVersion?.releasableLines ?? const [];
-    final canRelease = ['ACCEPTED', 'PARTIALLY_CONVERTED'].contains(quotation.status);
-    final assignedWarehouses = context.read<AuthService>().currentUser?.warehouses ?? const [];
+    final releasableLines =
+        quotation.currentVersion?.releasableLines ?? const [];
+    final canRelease = [
+      'ACCEPTED',
+      'PARTIALLY_CONVERTED',
+    ].contains(quotation.status);
+    final assignedWarehouses =
+        context.read<AuthService>().currentUser?.warehouses ?? const [];
 
     return Scaffold(
       appBar: AppBar(
         title: Text(quotation.quotationNumber),
         actions: const [ConnectionStatusBadge(), NotificationBell()],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 96),
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(child: Text(quotation.quotationNumber, style: theme.textTheme.titleLarge)),
-              StatusPill(value: quotation.status),
-            ],
+      body: AppRefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.lg,
+            96,
           ),
-          const SizedBox(height: AppSpacing.md),
-          SectionCard(
-            title: l10n.quotationDetailSummaryTitle,
-            child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _kvRow(l10n.quotationDetailCustomerLabel, Text(reference.customerName(quotation.customerId))),
-                _kvRow(l10n.quotationDetailPaymentTermsLabel, Text(quotation.paymentTerms ?? '—')),
-                _kvRow(l10n.quotationDetailCurrencyLabel, Text(quotation.currency ?? '—')),
-                _kvRow(
-                  l10n.quotationDetailValidUntilLabel,
-                  Text(
-                    quotation.validityDays != null
-                        ? l10n.quotationDetailValidUntilWithDays(quotation.validUntil ?? '—', '${quotation.validityDays}')
-                        : (quotation.validUntil ?? '—'),
+                Expanded(
+                  child: Text(
+                    quotation.quotationNumber,
+                    style: theme.textTheme.titleLarge,
                   ),
-                  isLast: true,
                 ),
+                StatusPill(value: quotation.status),
               ],
             ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          SectionCard(
-            title: l10n.quotationDetailLinesTitle('${quotation.version}'),
-            child: lines.isEmpty
-                ? Text(l10n.quotationDetailNoLines)
-                : Column(
-                    children: [
-                      for (final line in lines)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: Row(
-                            children: [
-                              Expanded(
+            const SizedBox(height: AppSpacing.md),
+            SectionCard(
+              title: l10n.quotationDetailSummaryTitle,
+              child: Column(
+                children: [
+                  _kvRow(
+                    l10n.quotationDetailCustomerLabel,
+                    Text(reference.customerName(quotation.customerId)),
+                  ),
+                  _kvRow(
+                    l10n.quotationDetailPaymentTermsLabel,
+                    Text(quotation.paymentTerms ?? '—'),
+                  ),
+                  _kvRow(
+                    l10n.quotationDetailCurrencyLabel,
+                    Text(quotation.currency ?? '—'),
+                  ),
+                  _kvRow(
+                    l10n.quotationDetailValidUntilLabel,
+                    Text(
+                      quotation.validityDays != null
+                          ? l10n.quotationDetailValidUntilWithDays(
+                              quotation.validUntil ?? '—',
+                              '${quotation.validityDays}',
+                            )
+                          : (quotation.validUntil ?? '—'),
+                    ),
+                    isLast: true,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SectionCard(
+              title: l10n.quotationDetailLinesTitle('${quotation.version}'),
+              child: lines.isEmpty
+                  ? Text(l10n.quotationDetailNoLines)
+                  : Column(
+                      children: [
+                        for (final line in lines)
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.sm,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        line.itemName ??
+                                            l10n.quotationDetailItemFallback(
+                                              '${line.itemId}',
+                                            ),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        l10n.quotationDetailQtyPriceLine(
+                                              '${line.quantity}',
+                                              line.uom ?? '',
+                                              '${line.price}',
+                                            ) +
+                                            ((line.focQuantity ?? 0) > 0
+                                                ? l10n.quotationDetailFocSuffix(
+                                                    '${line.focQuantity}',
+                                                    line.focUom ?? '',
+                                                  )
+                                                : ''),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: theme.colorScheme.outline,
+                                            ),
+                                      ),
+                                      Text(
+                                        l10n.quotationDetailReleasedRemainingLine(
+                                          '${line.releasedQuantity}',
+                                          '${line.remainingQuantity}',
+                                        ),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: theme.colorScheme.outline,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
+            if (canRelease) ...[
+              const SizedBox(height: AppSpacing.lg),
+              SectionCard(
+                title: l10n.quotationDetailReleaseSectionTitle,
+                child: _settingsLoading
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_actionError != null) ...[
+                            InlineErrorBanner(message: _actionError!),
+                            const SizedBox(height: AppSpacing.sm),
+                          ],
+                          if (releasableLines.isEmpty)
+                            Text(l10n.quotationDetailNoReleasableLines)
+                          else ...[
+                            Text(
+                              _partialReleaseEnabled
+                                  ? l10n.quotationDetailReleaseNotePartial
+                                  : l10n.quotationDetailReleaseNoteFullOnly,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.outline,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            for (final line in releasableLines)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.md,
+                                ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      line.itemName ?? l10n.quotationDetailItemFallback('${line.itemId}'),
-                                      style: const TextStyle(fontWeight: FontWeight.w600),
-                                    ),
-                                    Text(
-                                      l10n.quotationDetailQtyPriceLine('${line.quantity}', line.uom ?? '', '${line.price}') +
-                                          ((line.focQuantity ?? 0) > 0
-                                              ? l10n.quotationDetailFocSuffix('${line.focQuantity}', line.focUom ?? '')
-                                              : ''),
-                                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
-                                    ),
-                                    Text(
-                                      l10n.quotationDetailReleasedRemainingLine(
-                                        '${line.releasedQuantity}',
-                                        '${line.remainingQuantity}',
+                                      line.itemName ??
+                                          l10n.quotationDetailItemFallback(
+                                            '${line.itemId}',
+                                          ),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                                    ),
+                                    Text(
+                                      l10n.quotationDetailRemainingLabelValue(
+                                        '${line.remainingQuantity}',
+                                        line.uom ?? '',
+                                      ),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: theme.colorScheme.outline,
+                                          ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.xs),
+                                    Row(
+                                      children: [
+                                        if (_partialReleaseEnabled)
+                                          Expanded(
+                                            child: TextField(
+                                              controller: _qtyControllerFor(
+                                                line,
+                                              ),
+                                              keyboardType:
+                                                  const TextInputType.numberWithOptions(
+                                                    decimal: true,
+                                                  ),
+                                              decoration: InputDecoration(
+                                                isDense: true,
+                                                labelText: l10n
+                                                    .quotationDetailReleaseQtyLabel,
+                                              ),
+                                              onChanged: (_) => setState(() {}),
+                                            ),
+                                          ),
+                                        if (_partialReleaseEnabled)
+                                          const SizedBox(width: AppSpacing.sm),
+                                        Expanded(
+                                          child: DropdownButtonFormField<int>(
+                                            initialValue:
+                                                _lineWarehouseId[line.id],
+                                            isExpanded: true,
+                                            decoration: InputDecoration(
+                                              isDense: true,
+                                              labelText: l10n
+                                                  .quotationDetailWarehouseLabel,
+                                            ),
+                                            items: [
+                                              for (final warehouse
+                                                  in assignedWarehouses)
+                                                DropdownMenuItem(
+                                                  value: warehouse.id,
+                                                  child: Text(warehouse.name),
+                                                ),
+                                            ],
+                                            onChanged: (value) => setState(() {
+                                              if (value != null)
+                                                _lineWarehouseId[line.id] =
+                                                    value;
+                                            }),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
                               ),
-                            ],
+                            Wrap(
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.sm,
+                              children: [
+                                if (_partialReleaseEnabled)
+                                  LoadingButton(
+                                    label: l10n
+                                        .quotationDetailFillFullRemainingButton,
+                                    variant: LoadingButtonVariant.outlined,
+                                    loading: false,
+                                    onPressed: _busyAction != null
+                                        ? null
+                                        : () => _fillFullRemaining(
+                                            releasableLines,
+                                          ),
+                                  ),
+                                LoadingButton(
+                                  label: _partialReleaseEnabled
+                                      ? l10n.quotationDetailReleaseButton
+                                      : l10n.quotationDetailReleaseButtonFullOnly,
+                                  loading: _busyAction == 'order',
+                                  onPressed:
+                                      _busyAction != null ||
+                                          !_canSubmitRelease(releasableLines)
+                                      ? null
+                                      : () => _submitRelease(releasableLines),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.lg),
+            SectionCard(
+              title: l10n.quotationDetailActionsTitle,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (!canRelease && _actionError != null) ...[
+                    InlineErrorBanner(message: _actionError!),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      LoadingButton(
+                        label: l10n.quotationDetailDownloadPdfButton,
+                        variant: LoadingButtonVariant.outlined,
+                        loading: _pdfBusy,
+                        onPressed: _downloadPdf,
+                      ),
+                      if (quotation.priceOfferRequestId != null)
+                        LoadingButton(
+                          label: l10n.relatedRecordsViewRequestButton,
+                          variant: LoadingButtonVariant.outlined,
+                          loading: false,
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => RequestDetailScreen(
+                                id: quotation.priceOfferRequestId!,
+                              ),
+                            ),
                           ),
+                        ),
+                      LoadingButton(
+                        label: l10n.relatedRecordsViewSalesOrderButton,
+                        variant: LoadingButtonVariant.outlined,
+                        loading: false,
+                        onPressed: () =>
+                            openSalesOrdersForQuotation(context, quotation.id),
+                      ),
+                      if (quotation.status == 'DRAFT')
+                        LoadingButton(
+                          label: l10n.quotationDetailSendButton,
+                          loading: _busyAction == 'send',
+                          onPressed: _busyAction != null
+                              ? null
+                              : () => _performAction(
+                                  'send',
+                                  () => context
+                                      .read<OffersService>()
+                                      .sendQuotation(quotation.id),
+                                ),
                         ),
                     ],
                   ),
-          ),
-          if (canRelease) ...[
-            const SizedBox(height: AppSpacing.lg),
-            SectionCard(
-              title: l10n.quotationDetailReleaseSectionTitle,
-              child: _settingsLoading
-                  ? const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (_actionError != null) ...[
-                          InlineErrorBanner(message: _actionError!),
-                          const SizedBox(height: AppSpacing.sm),
-                        ],
-                        if (releasableLines.isEmpty)
-                          Text(l10n.quotationDetailNoReleasableLines)
-                        else ...[
-                          Text(
-                            _partialReleaseEnabled
-                                ? l10n.quotationDetailReleaseNotePartial
-                                : l10n.quotationDetailReleaseNoteFullOnly,
-                            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          for (final line in releasableLines)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    line.itemName ?? l10n.quotationDetailItemFallback('${line.itemId}'),
-                                    style: const TextStyle(fontWeight: FontWeight.w600),
-                                  ),
-                                  Text(
-                                    l10n.quotationDetailRemainingLabelValue('${line.remainingQuantity}', line.uom ?? ''),
-                                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
-                                  ),
-                                  const SizedBox(height: AppSpacing.xs),
-                                  Row(
-                                    children: [
-                                      if (_partialReleaseEnabled)
-                                        Expanded(
-                                          child: TextField(
-                                            controller: _qtyControllerFor(line),
-                                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                            decoration: InputDecoration(
-                                              isDense: true,
-                                              labelText: l10n.quotationDetailReleaseQtyLabel,
-                                            ),
-                                            onChanged: (_) => setState(() {}),
-                                          ),
-                                        ),
-                                      if (_partialReleaseEnabled) const SizedBox(width: AppSpacing.sm),
-                                      Expanded(
-                                        child: DropdownButtonFormField<int>(
-                                          initialValue: _lineWarehouseId[line.id],
-                                          isExpanded: true,
-                                          decoration: InputDecoration(
-                                            isDense: true,
-                                            labelText: l10n.quotationDetailWarehouseLabel,
-                                          ),
-                                          items: [
-                                            for (final warehouse in assignedWarehouses)
-                                              DropdownMenuItem(value: warehouse.id, child: Text(warehouse.name)),
-                                          ],
-                                          onChanged: (value) => setState(() {
-                                            if (value != null) _lineWarehouseId[line.id] = value;
-                                          }),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: [
-                              if (_partialReleaseEnabled)
-                                LoadingButton(
-                                  label: l10n.quotationDetailFillFullRemainingButton,
-                                  variant: LoadingButtonVariant.outlined,
-                                  loading: false,
-                                  onPressed: _busyAction != null ? null : () => _fillFullRemaining(releasableLines),
-                                ),
-                              LoadingButton(
-                                label: _partialReleaseEnabled
-                                    ? l10n.quotationDetailReleaseButton
-                                    : l10n.quotationDetailReleaseButtonFullOnly,
-                                loading: _busyAction == 'order',
-                                onPressed: _busyAction != null || !_canSubmitRelease(releasableLines)
-                                    ? null
-                                    : () => _submitRelease(releasableLines),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
+                ],
+              ),
             ),
           ],
-          const SizedBox(height: AppSpacing.lg),
-          SectionCard(
-            title: l10n.quotationDetailActionsTitle,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (!canRelease && _actionError != null) ...[
-                  InlineErrorBanner(message: _actionError!),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    LoadingButton(
-                      label: l10n.quotationDetailDownloadPdfButton,
-                      variant: LoadingButtonVariant.outlined,
-                      loading: _pdfBusy,
-                      onPressed: _downloadPdf,
-                    ),
-                    if (quotation.priceOfferRequestId != null)
-                      LoadingButton(
-                        label: l10n.relatedRecordsViewRequestButton,
-                        variant: LoadingButtonVariant.outlined,
-                        loading: false,
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => RequestDetailScreen(id: quotation.priceOfferRequestId!)),
-                        ),
-                      ),
-                    LoadingButton(
-                      label: l10n.relatedRecordsViewSalesOrderButton,
-                      variant: LoadingButtonVariant.outlined,
-                      loading: false,
-                      onPressed: () => openSalesOrdersForQuotation(context, quotation.id),
-                    ),
-                    if (quotation.status == 'DRAFT')
-                      LoadingButton(
-                        label: l10n.quotationDetailSendButton,
-                        loading: _busyAction == 'send',
-                        onPressed: _busyAction != null
-                            ? null
-                            : () => _performAction('send', () => context.read<OffersService>().sendQuotation(quotation.id)),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -421,8 +572,13 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(width: 110, child: Text(label, style: const TextStyle(color: Colors.grey))),
-          Expanded(child: Align(alignment: Alignment.centerLeft, child: value)),
+          SizedBox(
+            width: 110,
+            child: Text(label, style: const TextStyle(color: Colors.grey)),
+          ),
+          Expanded(
+            child: Align(alignment: Alignment.centerLeft, child: value),
+          ),
         ],
       ),
     );

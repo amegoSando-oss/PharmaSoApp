@@ -107,6 +107,14 @@ class PharmaSalesApp extends StatelessWidget {
             locale: locale.locale,
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
+            // A user's system font-scale is exactly what turns a fixed-size
+            // card into an overflow (see status_filter_bar.dart) — clamp it
+            // app-wide instead of guarding every fixed-height widget.
+            builder: (context, child) => MediaQuery.withClampedTextScaling(
+              minScaleFactor: 0.85,
+              maxScaleFactor: 1.3,
+              child: child!,
+            ),
             home: const AppBootstrapper(child: SplashScreen()),
           );
         },

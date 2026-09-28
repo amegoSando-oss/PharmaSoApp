@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/responsive.dart';
+
 class StatusFilterOption {
   final String? key;
   final String label;
@@ -35,7 +37,10 @@ class StatusFilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 76,
+      // Tall enough for a 2-line label even in Arabic, whose line height
+      // runs taller than Latin text at the same font size and was
+      // overflowing the card by ~11px at 76.
+      height: context.scale(92),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: options.length,
@@ -65,7 +70,7 @@ class _FilterCard extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        width: 116,
+        width: context.scale(116),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected ? option.color.withValues(alpha: 0.14) : theme.colorScheme.surface,

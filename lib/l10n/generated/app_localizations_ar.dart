@@ -123,6 +123,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeOrdersAction => 'الطلبات';
 
   @override
+  String get homeStatsOpenRequestsLabel => 'طلبات مفتوحة';
+
+  @override
+  String get homeStatsPendingQuotationsLabel => 'عروض أسعار معلقة';
+
+  @override
+  String get homeStatsDraftPriceOffersLabel => 'عروض أسعار غير مكتملة';
+
+  @override
   String get statusApproved => 'معتمد';
 
   @override

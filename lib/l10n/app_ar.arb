@@ -39,6 +39,9 @@
   "homeSalesOrderTitle": "أمر البيع",
   "homeSalesOrderSubtitle": "متابعة حالة الائتمان والتعليقات والتنفيذ",
   "homeOrdersAction": "الطلبات",
+  "homeStatsOpenRequestsLabel": "طلبات مفتوحة",
+  "homeStatsPendingQuotationsLabel": "عروض أسعار معلقة",
+  "homeStatsDraftPriceOffersLabel": "عروض أسعار غير مكتملة",
 
   "statusApproved": "معتمد",
   "statusAccepted": "مقبول",

@@ -125,6 +125,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeOrdersAction => 'Orders';
 
   @override
+  String get homeStatsOpenRequestsLabel => 'Open requests';
+
+  @override
+  String get homeStatsPendingQuotationsLabel => 'Pending quotations';
+
+  @override
+  String get homeStatsDraftPriceOffersLabel => 'Draft price offers';
+
+  @override
   String get statusApproved => 'Approved';
 
   @override

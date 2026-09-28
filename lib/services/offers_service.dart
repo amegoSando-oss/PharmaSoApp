@@ -109,8 +109,8 @@ class OffersService {
     return data.map((s) => WarehouseItemStock.fromJson(s as Map<String, dynamic>)).toList();
   }
 
-  Future<List<PriceOfferRequestSummary>> listRequests({int page = 1}) async {
-    final payload = await apiClient.get('/price-offer-requests', params: {'page': page, 'per_page': 50});
+  Future<List<PriceOfferRequestSummary>> listRequests({int page = 1, int perPage = 50}) async {
+    final payload = await apiClient.get('/price-offer-requests', params: {'page': page, 'per_page': perPage});
     final data = (payload['data'] as List?) ?? const [];
     return data.map((r) => PriceOfferRequestSummary.fromJson(r as Map<String, dynamic>)).toList();
   }

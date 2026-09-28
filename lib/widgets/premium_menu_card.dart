@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/responsive.dart';
+
 class MenuAction {
   final String label;
   final IconData icon;
@@ -65,8 +67,8 @@ class _PremiumMenuCardState extends State<PremiumMenuCard> {
                 Row(
                   children: [
                     Container(
-                      width: 56,
-                      height: 56,
+                      width: context.scale(56),
+                      height: context.scale(56),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
@@ -157,12 +159,12 @@ class _ActionIcon extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: SizedBox(
-          width: 76,
+          width: context.scale(76),
           child: Column(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: context.scale(48),
+                height: context.scale(48),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(16),

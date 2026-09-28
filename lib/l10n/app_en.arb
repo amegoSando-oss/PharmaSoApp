@@ -40,6 +40,9 @@
   "homeSalesOrderTitle": "Sales Order",
   "homeSalesOrderSubtitle": "Monitor credit status, holds and fulfilment",
   "homeOrdersAction": "Orders",
+  "homeStatsOpenRequestsLabel": "Open requests",
+  "homeStatsPendingQuotationsLabel": "Pending quotations",
+  "homeStatsDraftPriceOffersLabel": "Draft price offers",
 
   "statusApproved": "Approved",
   "statusAccepted": "Accepted",

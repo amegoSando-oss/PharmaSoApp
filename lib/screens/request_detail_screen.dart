@@ -603,6 +603,9 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         );
 
       case 'IN_APPROVAL':
+        if (!detail.canApprove && !detail.canReturn && !detail.canSkip && !detail.canReject) {
+          return Text(l10n.requestDetailNoActionsStatus(detail.status), style: TextStyle(color: theme.colorScheme.outline));
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

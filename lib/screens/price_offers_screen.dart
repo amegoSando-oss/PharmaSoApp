@@ -27,7 +27,9 @@ import 'create_offer_screen.dart';
 import 'request_detail_screen.dart';
 
 class PriceOffersScreen extends StatefulWidget {
-  const PriceOffersScreen({super.key});
+  final String? initialStatusKey;
+
+  const PriceOffersScreen({super.key, this.initialStatusKey});
 
   @override
   State<PriceOffersScreen> createState() => _PriceOffersScreenState();
@@ -41,7 +43,7 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> {
   String _searchQuery = '';
   DateTime? _selectedDate;
   int? _selectedCustomerId;
-  String? _selectedStatusKey;
+  late String? _selectedStatusKey;
 
   Timer? _pollTimer;
   VoidCallback? _unsubscribeLiveUpdate;
@@ -49,6 +51,7 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedStatusKey = widget.initialStatusKey;
     _future = _load()..whenComplete(() {
       if (mounted) setState(() => _firstLoad = false);
     });
