@@ -7,8 +7,10 @@ import '../core/hero_page_route.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../theme/app_spacing.dart';
+import '../widgets/connection_status_badge.dart';
 import '../widgets/interactive_bubbles.dart';
 import '../widgets/error_state.dart';
+import '../widgets/language_toggle.dart';
 import '../widgets/loading_button.dart';
 import 'home_screen.dart';
 
@@ -131,7 +133,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Text(l10n.loginSignInTitle, style: theme.textTheme.titleLarge),
                                 const SizedBox(height: AppSpacing.xs),
                                 Text(l10n.loginSubtitle, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline)),
                               ],
@@ -145,7 +146,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             autofillHints: const [AutofillHints.email],
                             decoration: InputDecoration(
                               labelText: l10n.loginEmailLabel,
-                              hintText: 'you@company.com',
                               prefixIcon: const Icon(Icons.mail_outline),
                             ),
                             onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
@@ -160,7 +160,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             autofillHints: const [AutofillHints.password],
                             decoration: InputDecoration(
                               labelText: l10n.loginPasswordLabel,
-                              hintText: l10n.loginPasswordHint,
                               prefixIcon: const Icon(Icons.lock_outline),
                               suffixIcon: IconButton(
                                 icon: Icon(_obscure
@@ -235,6 +234,24 @@ class _LoginHeader extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           const Positioned.fill(child: InteractiveBubbles(count: 3, minSize: 90, maxSize: 160)),
+          Positioned.fill(
+            child: SafeArea(
+              bottom: false,
+              child: Align(
+                alignment: AlignmentDirectional.topEnd,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      ConnectionStatusBadge(),
+                      LanguageToggle(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
           SafeArea(
             bottom: false,
             child: Padding(
@@ -262,11 +279,6 @@ class _LoginHeader extends StatelessWidget {
                     l10n.commonAppName,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    l10n.loginTagline,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.8)),
                   ),
                 ],
               ),

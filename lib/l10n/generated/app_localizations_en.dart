@@ -312,23 +312,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusDraft => 'Draft';
 
   @override
-  String get statusQuotationGenerated => 'Quotation generated';
+  String get statusQuotationGenerated => 'Ready Quotation';
 
   @override
   String get loginOfflineError =>
       'No internet connection. Signing in for the first time on this device needs a connection — if you\'ve signed in here before, just reopen the app instead.';
 
   @override
-  String get loginSignInTitle => 'Sign in to your workspace';
+  String get loginSubtitle => 'Use your PharmaSo account to continue.';
 
   @override
-  String get loginSubtitle => 'Use your Pharamaso account to continue.';
+  String get loginEmailLabel => 'RepSales Code';
 
   @override
-  String get loginEmailLabel => 'Email address';
-
-  @override
-  String get loginEmailRequiredError => 'Email is required';
+  String get loginEmailRequiredError => 'RepSales Code is required';
 
   @override
   String get loginPasswordLabel => 'Password';
@@ -348,9 +345,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get loginAccessNotice =>
       'Your access is controlled by your assigned roles and permissions.';
-
-  @override
-  String get loginTagline => 'Commercial OS';
 
   @override
   String get splashCompanyName => 'DAKAHLIA GROUP';
@@ -435,6 +429,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createOfferLineItemsSectionTitle => 'Line items';
 
   @override
+  String createOfferLineItemsSectionTitleWithCount(int count) {
+    return 'Line items ($count)';
+  }
+
+  @override
   String get createOfferAddLineButton => 'Add line';
 
   @override
@@ -495,7 +494,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createOfferProposedPriceLabel => 'Proposed price';
 
   @override
-  String get createOfferFocPercentLabel => 'FOC %';
+  String get createOfferFocPercentLabel => 'Discount %';
 
   @override
   String get createOfferFocHelperText =>
@@ -566,6 +565,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get priceOffersStatusDraft => 'Draft';
 
   @override
+  String get priceOffersStatusOpenRequests => 'Open requests';
+
+  @override
   String get priceOffersStatusPending => 'Pending';
 
   @override
@@ -575,7 +577,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get priceOffersStatusRejected => 'Rejected';
 
   @override
-  String get priceOffersStatusQuotationGenerated => 'Quotation generated';
+  String get priceOffersStatusQuotationGenerated => 'Ready Quotation';
 
   @override
   String get priceOffersNoMatchTitle => 'No matching requests';
@@ -672,6 +674,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get requestDetailLinesTitle => 'Lines';
 
   @override
+  String requestDetailLinesTitleWithCount(int count) {
+    return 'Lines ($count)';
+  }
+
+  @override
+  String requestDetailLineTotalLabel(Object total) {
+    return 'Line total: $total';
+  }
+
+  @override
+  String get requestDetailLinesTotalLabel => 'Lines total';
+
+  @override
   String get requestDetailNoLines => 'No lines on this request.';
 
   @override
@@ -719,7 +734,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String requestDetailFocLine(Object focPercent) {
-    return 'FOC $focPercent%';
+    return 'Discount $focPercent%';
   }
 
   @override
@@ -735,7 +750,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get requestDetailItemLabel => 'Item';
 
   @override
-  String get requestDetailFocPercentLabel => 'FOC % (optional)';
+  String get requestDetailFocPercentLabel => 'Discount % (optional)';
 
   @override
   String get requestDetailNoActionsDraft =>
@@ -927,6 +942,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String quotationDetailLinesTitleWithCount(Object version, int count) {
+    return 'Lines (v$version · $count)';
+  }
+
+  @override
+  String quotationDetailLineTotalLabel(Object total) {
+    return 'Line total: $total';
+  }
+
+  @override
+  String get quotationDetailLinesTotalLabel => 'Lines total';
+
+  @override
   String get quotationDetailNoLines =>
       'No line details available for this version.';
 
@@ -946,7 +974,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String quotationDetailFocSuffix(Object focQuantity, Object focUom) {
-    return ' · FOC $focQuantity $focUom';
+    return ' · Discount $focQuantity $focUom';
   }
 
   @override
@@ -1002,6 +1030,40 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get quotationDetailReleaseButtonFullOnly =>
       'Release full quotation into sales order';
+
+  @override
+  String get quotationDetailResponseRecordedMessage =>
+      'Customer response recorded.';
+
+  @override
+  String get quotationDetailResponseSectionTitle => 'Customer response';
+
+  @override
+  String get quotationDetailResponseSectionNote =>
+      'Record what the customer told you — this replaces waiting on their own confirmation link, and an Accepted response unlocks releasing this quotation into a sales order.';
+
+  @override
+  String get quotationDetailResponseLabel => 'Response';
+
+  @override
+  String get quotationDetailResponseAccepted => 'Accepted';
+
+  @override
+  String get quotationDetailResponseRejected => 'Rejected';
+
+  @override
+  String get quotationDetailResponseNegotiationRequested =>
+      'Negotiation requested';
+
+  @override
+  String get quotationDetailResponseCustomerNameLabel =>
+      'Customer name (optional)';
+
+  @override
+  String get quotationDetailResponseCommentsLabel => 'Comments (optional)';
+
+  @override
+  String get quotationDetailResponseSubmitButton => 'Record customer response';
 
   @override
   String get salesOrdersTitle => 'Sales orders';
@@ -1109,6 +1171,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get salesOrderDetailLinesTitle => 'Lines';
 
   @override
+  String salesOrderDetailLinesTitleWithCount(int count) {
+    return 'Lines ($count)';
+  }
+
+  @override
   String get salesOrderDetailNoLinesMessage => 'No lines on this order.';
 
   @override
@@ -1123,7 +1190,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String salesOrderDetailFocLabel(Object focQuantity) {
-    return 'FOC $focQuantity';
+    return 'Discount $focQuantity';
   }
 
   @override

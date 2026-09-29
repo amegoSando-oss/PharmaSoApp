@@ -495,7 +495,7 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
               ),
               const SizedBox(height: AppSpacing.lg),
               SectionCard(
-                title: l10n.createOfferLineItemsSectionTitle,
+                title: l10n.createOfferLineItemsSectionTitleWithCount(_lines.length),
                 trailing: TextButton.icon(
                   onPressed: _addLine,
                   icon: const Icon(Icons.add, size: 18),

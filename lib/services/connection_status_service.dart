@@ -154,8 +154,11 @@ class ConnectionStatusService extends ChangeNotifier {
   }
 
   ConnectionQuality _computeQuality() {
-    if (!hasNetwork) return ConnectionQuality.offline;
-    if (_recentPings.isNotEmpty && _recentPings.every((r) => !r)) return ConnectionQuality.offline;
+    // A device can report "connected" Wi-Fi/data while the backend itself is
+    // down or unreachable (wrong network, VPN, server outage). In that case
+    // the app must behave as offline right away — don't wait for a run of
+    // failed pings to accumulate just because the network interface is up.
+    if (!hasNetwork || !serverReachable) return ConnectionQuality.offline;
 
     final anyRecentFailure = _recentPings.any((r) => !r);
     final isSlow = latencyMs != null && latencyMs! > _slowLatencyMs;

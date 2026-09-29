@@ -17,6 +17,16 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+/// Thrown by [ApiClient] instead of attempting a request when
+/// [ApiClient.isOffline] already reports the server as unreachable — lets
+/// callers (CachedFetch, offline queueing, ...) fall back to local data
+/// immediately instead of waiting out [ApiClient._timeout] on a request that
+/// is already known to fail.
+class OfflineException implements Exception {
+  @override
+  String toString() => 'Offline: no connection to the server';
+}
+
 typedef UnauthenticatedCallback = Future<bool> Function();
 
 /// Thin JSON wrapper around [http], mirroring resources/js/core/api.js:
@@ -30,6 +40,12 @@ class ApiClient {
 
   String? _token;
   UnauthenticatedCallback? onUnauthenticated;
+
+  /// Set by [ConnectionStatusService] once it's tracking live reachability.
+  /// When this reports true, [_request]/[getBytes] skip the network call
+  /// entirely and throw [OfflineException] right away rather than blocking
+  /// the UI for up to [_timeout] on a request already known to fail.
+  bool Function()? isOffline;
 
   String? get token => _token;
 
@@ -98,9 +114,12 @@ class ApiClient {
 
   Future<dynamic> _request(
     String path,
-    Future<http.Response> Function() requestFn,
-  ) async {
-    final response = await requestFn().timeout(_timeout);
+    Future<http.Response> Function() requestFn, {
+    Duration? timeout,
+  }) async {
+    if (isOffline?.call() == true) throw OfflineException();
+    final effectiveTimeout = timeout ?? _timeout;
+    final response = await requestFn().timeout(effectiveTimeout);
     if (response.statusCode == 401 &&
         onUnauthenticated != null &&
         path != '/auth/token' &&
@@ -109,17 +128,18 @@ class ApiClient {
       final renewed = await onUnauthenticated!();
       if (renewed) {
         debugPrint('[ApiClient] Silent token refresh succeeded! Retrying request for $path...');
-        final retryResponse = await requestFn().timeout(_timeout);
+        final retryResponse = await requestFn().timeout(effectiveTimeout);
         return _decode(retryResponse);
       }
     }
     return _decode(response);
   }
 
-  Future<dynamic> get(String path, {Map<String, dynamic>? params}) async {
+  Future<dynamic> get(String path, {Map<String, dynamic>? params, Duration? timeout}) async {
     return _request(
       path,
       () => http.get(_uri(path, params), headers: _headers()),
+      timeout: timeout,
     );
   }
 
@@ -164,6 +184,7 @@ class ApiClient {
 
   /// For binary responses (e.g. the quotation PDF), which aren't JSON.
   Future<Uint8List> getBytes(String path) async {
+    if (isOffline?.call() == true) throw OfflineException();
     Future<http.Response> requestFn() {
       final headers = _headers()..['Accept'] = '*/*';
       return http.get(_uri(path), headers: headers);

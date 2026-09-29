@@ -89,7 +89,16 @@ class PharmaSalesApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: localeProvider),
         Provider<ApiClient>(create: (_) => ApiClient()),
         ChangeNotifierProvider(create: (context) => AuthService(context.read<ApiClient>())),
-        ChangeNotifierProvider(create: (context) => ConnectionStatusService(context.read<ApiClient>())..start()),
+        ChangeNotifierProvider(create: (context) {
+          final apiClient = context.read<ApiClient>();
+          final connectionStatus = ConnectionStatusService(apiClient);
+          // Once a check has run, a known-offline state should make every
+          // other API call fail fast instead of waiting out its own timeout
+          // (see ApiClient.isOffline) — this is what lets screens open
+          // straight from local/cached data instead of stalling on startup.
+          apiClient.isOffline = () => connectionStatus.quality == ConnectionQuality.offline;
+          return connectionStatus..start();
+        }),
         Provider(create: (context) => OffersService(context.read<ApiClient>())),
         ChangeNotifierProvider(create: (context) => OfflineSyncService(context.read<ApiClient>())),
         Provider(create: (context) => QuotationsService(context.read<ApiClient>())),

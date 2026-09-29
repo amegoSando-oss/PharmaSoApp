@@ -233,6 +233,26 @@ class OffersService {
     return data['partial_release_enabled'] == true;
   }
 
+  /// Records what the customer told the rep by phone/in person — posts
+  /// through the same token-verified public endpoint the customer's own
+  /// web confirmation link submits to (QuotationController::respond()).
+  /// [token] is the quotation's confirmation_token, only present on a
+  /// quotation fetched while authenticated (see Quotation.confirmationToken).
+  Future<void> recordQuotationResponse(
+    int quotationId, {
+    required String token,
+    required String response,
+    String? customerName,
+    String? comments,
+  }) async {
+    await apiClient.post('/quotations/$quotationId/respond', prefix: 'quotation-respond', body: {
+      'token': token,
+      'response': response,
+      if (customerName != null && customerName.isNotEmpty) 'customer_name': customerName,
+      if (comments != null && comments.isNotEmpty) 'comments': comments,
+    });
+  }
+
   /// Releases some or all of a quotation's still-open lines into a new (or
   /// existing, if already partially converted) sales order — see
   /// SalesOrderService::create(). [lines] must be non-empty.

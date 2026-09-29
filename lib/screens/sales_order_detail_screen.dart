@@ -260,7 +260,7 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen> {
         ],
         const SizedBox(height: AppSpacing.lg),
         SectionCard(
-          title: l10n.salesOrderDetailLinesTitle,
+          title: l10n.salesOrderDetailLinesTitleWithCount(order.lines.length),
           child: order.lines.isEmpty
               ? Text(l10n.salesOrderDetailNoLinesMessage)
               : Column(

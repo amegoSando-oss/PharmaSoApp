@@ -9,7 +9,7 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get commonAppName => 'فارماسو';
+  String get commonAppName => 'PharmaSo';
 
   @override
   String get commonLanguageTooltip => 'اللغة';
@@ -310,23 +310,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get statusDraft => 'مسودة';
 
   @override
-  String get statusQuotationGenerated => 'تم إصدار عرض السعر';
+  String get statusQuotationGenerated => 'عرض سعر جاهز';
 
   @override
   String get loginOfflineError =>
       'لا يوجد اتصال بالإنترنت. يتطلب تسجيل الدخول لأول مرة على هذا الجهاز اتصالاً — إذا سبق أن سجّلت الدخول هنا من قبل، فقط أعد فتح التطبيق.';
 
   @override
-  String get loginSignInTitle => 'تسجيل الدخول إلى مساحة عملك';
-
-  @override
   String get loginSubtitle => 'استخدم حساب PharmaSo الخاص بك للمتابعة.';
 
   @override
-  String get loginEmailLabel => 'البريد الإلكتروني';
+  String get loginEmailLabel => 'كود الموظف';
 
   @override
-  String get loginEmailRequiredError => 'البريد الإلكتروني مطلوب';
+  String get loginEmailRequiredError => 'كود الموظف مطلوب';
 
   @override
   String get loginPasswordLabel => 'كلمة المرور';
@@ -346,9 +343,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get loginAccessNotice =>
       'صلاحيات الوصول الخاصة بك تخضع للأدوار والصلاحيات المسندة إليك.';
-
-  @override
-  String get loginTagline => 'نظام إدارة المبيعات';
 
   @override
   String get splashCompanyName => 'مجموعة دقهلية';
@@ -432,6 +426,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get createOfferLineItemsSectionTitle => 'بنود الأصناف';
 
   @override
+  String createOfferLineItemsSectionTitleWithCount(int count) {
+    return 'بنود الأصناف ($count)';
+  }
+
+  @override
   String get createOfferAddLineButton => 'إضافة سطر';
 
   @override
@@ -492,11 +491,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get createOfferProposedPriceLabel => 'السعر المقترح';
 
   @override
-  String get createOfferFocPercentLabel => 'نسبة المجاني %';
+  String get createOfferFocPercentLabel => 'نسبة التخفيض %';
 
   @override
   String get createOfferFocHelperText =>
-      'علامة توضيحية للمعتمد فقط — لا تغيّر السعر أو الكمية. يقوم المعتمد بإضافة سطر منفصل بسعر صفر للكمية المجانية الفعلية.';
+      'علامة توضيحية للمعتمد فقط — لا تغيّر السعر أو الكمية. يقوم المعتمد بإضافة سطر منفصل بسعر صفر للكميةالتخفيض الفعلية.';
 
   @override
   String get createOfferStockDisclaimer =>
@@ -562,6 +561,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get priceOffersStatusDraft => 'مسودة';
 
   @override
+  String get priceOffersStatusOpenRequests => 'طلبات مفتوحة';
+
+  @override
   String get priceOffersStatusPending => 'قيد الانتظار';
 
   @override
@@ -571,7 +573,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get priceOffersStatusRejected => 'مرفوض';
 
   @override
-  String get priceOffersStatusQuotationGenerated => 'تم إصدار عرض السعر';
+  String get priceOffersStatusQuotationGenerated => 'عروض الاسعار الجاهزه';
 
   @override
   String get priceOffersNoMatchTitle => 'لا توجد طلبات مطابقة';
@@ -668,6 +670,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get requestDetailLinesTitle => 'البنود';
 
   @override
+  String requestDetailLinesTitleWithCount(int count) {
+    return 'البنود ($count)';
+  }
+
+  @override
+  String requestDetailLineTotalLabel(Object total) {
+    return 'إجمالي البند: $total';
+  }
+
+  @override
+  String get requestDetailLinesTotalLabel => 'إجمالي البنود';
+
+  @override
   String get requestDetailNoLines => 'لا توجد بنود في هذا الطلب.';
 
   @override
@@ -731,7 +746,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get requestDetailItemLabel => 'الصنف';
 
   @override
-  String get requestDetailFocPercentLabel => 'نسبة المجاني % (اختياري)';
+  String get requestDetailFocPercentLabel => 'نسبة التخفيض % (اختياري)';
 
   @override
   String get requestDetailNoActionsDraft =>
@@ -921,6 +936,19 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String quotationDetailLinesTitleWithCount(Object version, int count) {
+    return 'البنود (الإصدار $version · $count)';
+  }
+
+  @override
+  String quotationDetailLineTotalLabel(Object total) {
+    return 'إجمالي البند: $total';
+  }
+
+  @override
+  String get quotationDetailLinesTotalLabel => 'إجمالي البنود';
+
+  @override
   String get quotationDetailNoLines => 'لا تتوفر تفاصيل بنود لهذا الإصدار.';
 
   @override
@@ -995,6 +1023,37 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get quotationDetailReleaseButtonFullOnly =>
       'الإفراج عن كامل عرض السعر إلى أمر بيع';
+
+  @override
+  String get quotationDetailResponseRecordedMessage => 'تم تسجيل رد العميل.';
+
+  @override
+  String get quotationDetailResponseSectionTitle => 'رد العميل';
+
+  @override
+  String get quotationDetailResponseSectionNote =>
+      'سجّل ما أخبرك به العميل — هذا يغني عن انتظار رابط التأكيد الخاص به، والموافقة تتيح تحويل عرض السعر إلى أمر بيع.';
+
+  @override
+  String get quotationDetailResponseLabel => 'الرد';
+
+  @override
+  String get quotationDetailResponseAccepted => 'موافقة';
+
+  @override
+  String get quotationDetailResponseRejected => 'رفض';
+
+  @override
+  String get quotationDetailResponseNegotiationRequested => 'طلب تفاوض';
+
+  @override
+  String get quotationDetailResponseCustomerNameLabel => 'اسم العميل (اختياري)';
+
+  @override
+  String get quotationDetailResponseCommentsLabel => 'ملاحظات (اختياري)';
+
+  @override
+  String get quotationDetailResponseSubmitButton => 'تسجيل رد العميل';
 
   @override
   String get salesOrdersTitle => 'طلبات المبيعات';
@@ -1098,6 +1157,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get salesOrderDetailLinesTitle => 'بنود الطلب';
+
+  @override
+  String salesOrderDetailLinesTitleWithCount(int count) {
+    return 'بنود الطلب ($count)';
+  }
 
   @override
   String get salesOrderDetailNoLinesMessage => 'لا توجد بنود في هذا الطلب.';

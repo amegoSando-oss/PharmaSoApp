@@ -201,6 +201,12 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> {
     switch (key) {
       case 'DRAFT':
         return rows.where((r) => r.status == 'DRAFT').toList();
+      case 'OPEN_REQUESTS':
+        // Both approval sub-stages combined — everything still in the
+        // pipeline, whether it's waiting on the first step (PENDING chip)
+        // or a later one (IN_APPROVAL chip). Mirrors the home screen's
+        // "Open requests" stat tile count.
+        return rows.where((r) => r.status == 'IN_APPROVAL').toList();
       case 'PENDING':
         return rows.where((r) => r.isPendingFirstApproval).toList();
       case 'IN_APPROVAL':
@@ -395,6 +401,13 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> {
                       count: _applyStatusFilter('DRAFT', nonStatusFiltered).length,
                     ),
                     StatusFilterOption(
+                      key: 'OPEN_REQUESTS',
+                      label: l10n.priceOffersStatusOpenRequests,
+                      icon: Icons.pending_actions,
+                      color: statusStyleFor(context, 'IN_APPROVAL').color,
+                      count: _applyStatusFilter('OPEN_REQUESTS', nonStatusFiltered).length,
+                    ),
+                    StatusFilterOption(
                       key: 'PENDING',
                       label: l10n.priceOffersStatusPending,
                       icon: Icons.hourglass_empty,
@@ -461,7 +474,13 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> {
                                 separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
                                 itemBuilder: (context, index) {
                                   final row = rows[index];
-                                  final statusColor = statusStyleFor(context, row.status).color;
+                                  // Same split the status filter chips use
+                                  // (PENDING vs IN_APPROVAL) — an IN_APPROVAL
+                                  // row still sitting at the first workflow
+                                  // step reads "Pending" here too, instead of
+                                  // always showing the raw IN_APPROVAL label.
+                                  final displayStatus = row.isPendingFirstApproval ? 'PENDING' : row.status;
+                                  final statusColor = statusStyleFor(context, displayStatus).color;
                                   final isDraft = row.status == 'DRAFT';
                                   return Card(
                                     child: InkWell(
@@ -512,7 +531,7 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> {
                                               ),
                                             ),
                                             const SizedBox(width: 8),
-                                            StatusPill(value: row.status),
+                                            StatusPill(value: displayStatus),
                                             const SizedBox(width: 4),
                                             Icon(Icons.chevron_right, color: theme.colorScheme.outline),
                                           ],

@@ -338,11 +338,26 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         ),
         const SizedBox(height: AppSpacing.lg),
         SectionCard(
-          title: l10n.requestDetailLinesTitle,
+          title: l10n.requestDetailLinesTitleWithCount(detail.lines.length),
           child: Column(
             children: [
               if (detail.lines.isEmpty) Text(l10n.requestDetailNoLines),
               for (final line in detail.lines) _buildLineCard(context, detail, line, reference),
+              if (detail.lines.isNotEmpty) ...[
+                const Divider(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(l10n.requestDetailLinesTotalLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text(
+                      detail.lines
+                          .fold<num>(0, (sum, line) => sum + line.quantity * line.proposedPrice)
+                          .toStringAsFixed(2),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ],
               if (detail.canAddItem) _buildAddLineSection(context),
               if (_lineError != null) ...[
                 const SizedBox(height: AppSpacing.sm),
@@ -469,6 +484,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   (minimumPrice != null ? l10n.requestDetailMinSuffix(minimumPrice) : '') +
                   (priceDifference != null ? l10n.requestDetailDiffSuffix(priceDifference) : ''),
                   style: const TextStyle(color: Colors.grey),
+                ),
+                Text(
+                  l10n.requestDetailLineTotalLabel((line.quantity * line.proposedPrice).toStringAsFixed(2)),
+                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 if ((focPercent ?? 0) > 0)
                   Padding(

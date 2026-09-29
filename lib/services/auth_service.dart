@@ -114,7 +114,12 @@ class AuthService extends ChangeNotifier {
 
     apiClient.setToken(token);
     try {
-      final payload = await apiClient.get('/auth/me');
+      // Cold start hasn't had time for ConnectionStatusService's own ping to
+      // report the server unreachable yet, so ApiClient.isOffline can't
+      // short-circuit this first call — bound it well under the default 10s
+      // timeout so a dead server can't stall the splash screen; the catch
+      // below already falls back to the cached profile.
+      final payload = await apiClient.get('/auth/me', timeout: const Duration(seconds: 4));
       final data = (payload as Map<String, dynamic>)['data'] as Map<String, dynamic>;
       currentUser = AppUser.fromJson(data);
       status = AuthStatus.authenticated;

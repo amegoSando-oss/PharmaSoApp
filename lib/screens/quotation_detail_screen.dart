@@ -46,6 +46,10 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
   final Map<int, int> _lineWarehouseId = {};
   final Map<int, TextEditingController> _qtyControllers = {};
 
+  String _responseValue = 'ACCEPTED';
+  final _responseCustomerNameController = TextEditingController();
+  final _responseCommentsController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +76,8 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
     for (final controller in _qtyControllers.values) {
       controller.dispose();
     }
+    _responseCustomerNameController.dispose();
+    _responseCommentsController.dispose();
     super.dispose();
   }
 
@@ -152,6 +158,31 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
     }
   }
 
+  /// Records the customer's decision on this SENT quotation on the rep's
+  /// behalf, then refreshes — an ACCEPTED response is what unlocks the
+  /// release-into-sales-order section above, so the settings fetch behind
+  /// it (skipped at initState time while the quotation was still SENT)
+  /// needs to run now too.
+  Future<void> _submitResponse() async {
+    final token = _quotation.confirmationToken;
+    if (token == null) return;
+    await _performAction(
+      'respond',
+      () => context.read<OffersService>().recordQuotationResponse(
+        _quotation.id,
+        token: token,
+        response: _responseValue,
+        customerName: _responseCustomerNameController.text,
+        comments: _responseCommentsController.text,
+      ),
+    );
+    if (!mounted || _actionError != null) return;
+    await _refresh();
+    if (mounted && ['ACCEPTED', 'PARTIALLY_CONVERTED'].contains(_quotation.status)) {
+      await _loadReleaseSettings();
+    }
+  }
+
   Future<void> _performAction(
     String action,
     Future<void> Function() call,
@@ -187,6 +218,8 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
         return l10n.quotationDetailSentMessage;
       case 'order':
         return l10n.quotationDetailOrderCreatedMessage;
+      case 'respond':
+        return l10n.quotationDetailResponseRecordedMessage;
       default:
         return l10n.quotationDetailActionDoneMessage;
     }
@@ -231,6 +264,8 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
       'ACCEPTED',
       'PARTIALLY_CONVERTED',
     ].contains(quotation.status);
+    final showResponseSection =
+        quotation.status == 'SENT' && quotation.confirmationToken != null;
     final assignedWarehouses =
         context.read<AuthService>().currentUser?.warehouses ?? const [];
 
@@ -296,7 +331,10 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
             ),
             const SizedBox(height: AppSpacing.lg),
             SectionCard(
-              title: l10n.quotationDetailLinesTitle('${quotation.version}'),
+              title: l10n.quotationDetailLinesTitleWithCount(
+                '${quotation.version}',
+                lines.length,
+              ),
               child: lines.isEmpty
                   ? Text(l10n.quotationDetailNoLines)
                   : Column(
@@ -349,12 +387,38 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                                               color: theme.colorScheme.outline,
                                             ),
                                       ),
+                                      Text(
+                                        l10n.quotationDetailLineTotalLabel(
+                                          (line.quantity * line.price)
+                                              .toStringAsFixed(2),
+                                        ),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
                           ),
+                        const Divider(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              l10n.quotationDetailLinesTotalLabel,
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            Text(
+                              lines
+                                  .fold<num>(0, (sum, line) => sum + line.quantity * line.price)
+                                  .toStringAsFixed(2),
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
             ),
@@ -502,13 +566,82 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                       ),
               ),
             ],
+            if (showResponseSection) ...[
+              const SizedBox(height: AppSpacing.lg),
+              SectionCard(
+                title: l10n.quotationDetailResponseSectionTitle,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_actionError != null) ...[
+                      InlineErrorBanner(message: _actionError!),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                    Text(
+                      l10n.quotationDetailResponseSectionNote,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    DropdownButtonFormField<String>(
+                      initialValue: _responseValue,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        labelText: l10n.quotationDetailResponseLabel,
+                      ),
+                      items: [
+                        DropdownMenuItem(
+                          value: 'ACCEPTED',
+                          child: Text(l10n.quotationDetailResponseAccepted),
+                        ),
+                        DropdownMenuItem(
+                          value: 'REJECTED',
+                          child: Text(l10n.quotationDetailResponseRejected),
+                        ),
+                        DropdownMenuItem(
+                          value: 'NEGOTIATION_REQUESTED',
+                          child: Text(l10n.quotationDetailResponseNegotiationRequested),
+                        ),
+                      ],
+                      onChanged: (value) => setState(() {
+                        if (value != null) _responseValue = value;
+                      }),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextField(
+                      controller: _responseCustomerNameController,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        labelText: l10n.quotationDetailResponseCustomerNameLabel,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextField(
+                      controller: _responseCommentsController,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        labelText: l10n.quotationDetailResponseCommentsLabel,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    LoadingButton(
+                      label: l10n.quotationDetailResponseSubmitButton,
+                      loading: _busyAction == 'respond',
+                      onPressed: _busyAction != null ? null : _submitResponse,
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             SectionCard(
               title: l10n.quotationDetailActionsTitle,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (!canRelease && _actionError != null) ...[
+                  if (!canRelease && !showResponseSection && _actionError != null) ...[
                     InlineErrorBanner(message: _actionError!),
                     const SizedBox(height: AppSpacing.sm),
                   ],

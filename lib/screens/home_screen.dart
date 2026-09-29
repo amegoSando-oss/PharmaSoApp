@@ -234,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       count: _openRequests,
                       loading: _statsLoading,
                       label: l10n.homeStatsOpenRequestsLabel,
-                      onTap: () => _push(context, const PriceOffersScreen()),
+                      onTap: () => _push(context, const PriceOffersScreen(initialStatusKey: 'OPEN_REQUESTS')),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),

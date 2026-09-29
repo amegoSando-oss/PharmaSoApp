@@ -120,6 +120,12 @@ class Quotation {
   final int version;
   final List<QuotationVersion> versions;
   final int? priceOfferRequestId;
+  // Only present when fetched by an authenticated user (QuotationResource
+  // withholds it from the public/customer-facing response) — needed to call
+  // the same token-verified /quotations/{id}/respond endpoint the customer's
+  // own confirmation link posts to, so a rep can record what the customer
+  // told them by phone/in person.
+  final String? confirmationToken;
 
   Quotation({
     required this.id,
@@ -137,6 +143,7 @@ class Quotation {
     required this.version,
     required this.versions,
     this.priceOfferRequestId,
+    this.confirmationToken,
   });
 
   /// The lines to display — the highest version number available.
@@ -164,6 +171,7 @@ class Quotation {
       version: asIntOrNull(json['version']) ?? 1,
       versions: versionsJson.map((v) => QuotationVersion.fromJson(v as Map<String, dynamic>)).toList(),
       priceOfferRequestId: asIntOrNull(json['price_offer_request_id']),
+      confirmationToken: json['confirmation_token']?.toString(),
     );
   }
 }

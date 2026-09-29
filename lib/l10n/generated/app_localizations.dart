@@ -623,7 +623,7 @@ abstract class AppLocalizations {
   /// No description provided for @statusQuotationGenerated.
   ///
   /// In en, this message translates to:
-  /// **'Quotation generated'**
+  /// **'Ready Quotation'**
   String get statusQuotationGenerated;
 
   /// No description provided for @loginOfflineError.
@@ -632,28 +632,22 @@ abstract class AppLocalizations {
   /// **'No internet connection. Signing in for the first time on this device needs a connection — if you\'ve signed in here before, just reopen the app instead.'**
   String get loginOfflineError;
 
-  /// No description provided for @loginSignInTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign in to your workspace'**
-  String get loginSignInTitle;
-
   /// No description provided for @loginSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Use your Pharamaso account to continue.'**
+  /// **'Use your PharmaSo account to continue.'**
   String get loginSubtitle;
 
   /// No description provided for @loginEmailLabel.
   ///
   /// In en, this message translates to:
-  /// **'Email address'**
+  /// **'RepSales Code'**
   String get loginEmailLabel;
 
   /// No description provided for @loginEmailRequiredError.
   ///
   /// In en, this message translates to:
-  /// **'Email is required'**
+  /// **'RepSales Code is required'**
   String get loginEmailRequiredError;
 
   /// No description provided for @loginPasswordLabel.
@@ -691,12 +685,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your access is controlled by your assigned roles and permissions.'**
   String get loginAccessNotice;
-
-  /// No description provided for @loginTagline.
-  ///
-  /// In en, this message translates to:
-  /// **'Commercial OS'**
-  String get loginTagline;
 
   /// No description provided for @splashCompanyName.
   ///
@@ -836,6 +824,12 @@ abstract class AppLocalizations {
   /// **'Line items'**
   String get createOfferLineItemsSectionTitle;
 
+  /// No description provided for @createOfferLineItemsSectionTitleWithCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Line items ({count})'**
+  String createOfferLineItemsSectionTitleWithCount(int count);
+
   /// No description provided for @createOfferAddLineButton.
   ///
   /// In en, this message translates to:
@@ -953,7 +947,7 @@ abstract class AppLocalizations {
   /// No description provided for @createOfferFocPercentLabel.
   ///
   /// In en, this message translates to:
-  /// **'FOC %'**
+  /// **'Discount %'**
   String get createOfferFocPercentLabel;
 
   /// No description provided for @createOfferFocHelperText.
@@ -1070,6 +1064,12 @@ abstract class AppLocalizations {
   /// **'Draft'**
   String get priceOffersStatusDraft;
 
+  /// No description provided for @priceOffersStatusOpenRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Open requests'**
+  String get priceOffersStatusOpenRequests;
+
   /// No description provided for @priceOffersStatusPending.
   ///
   /// In en, this message translates to:
@@ -1091,7 +1091,7 @@ abstract class AppLocalizations {
   /// No description provided for @priceOffersStatusQuotationGenerated.
   ///
   /// In en, this message translates to:
-  /// **'Quotation generated'**
+  /// **'Ready Quotation'**
   String get priceOffersStatusQuotationGenerated;
 
   /// No description provided for @priceOffersNoMatchTitle.
@@ -1256,6 +1256,24 @@ abstract class AppLocalizations {
   /// **'Lines'**
   String get requestDetailLinesTitle;
 
+  /// No description provided for @requestDetailLinesTitleWithCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Lines ({count})'**
+  String requestDetailLinesTitleWithCount(int count);
+
+  /// No description provided for @requestDetailLineTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Line total: {total}'**
+  String requestDetailLineTotalLabel(Object total);
+
+  /// No description provided for @requestDetailLinesTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lines total'**
+  String get requestDetailLinesTotalLabel;
+
   /// No description provided for @requestDetailNoLines.
   ///
   /// In en, this message translates to:
@@ -1335,7 +1353,7 @@ abstract class AppLocalizations {
   /// No description provided for @requestDetailFocLine.
   ///
   /// In en, this message translates to:
-  /// **'FOC {focPercent}%'**
+  /// **'Discount {focPercent}%'**
   String requestDetailFocLine(Object focPercent);
 
   /// No description provided for @requestDetailEditButton.
@@ -1365,7 +1383,7 @@ abstract class AppLocalizations {
   /// No description provided for @requestDetailFocPercentLabel.
   ///
   /// In en, this message translates to:
-  /// **'FOC % (optional)'**
+  /// **'Discount % (optional)'**
   String get requestDetailFocPercentLabel;
 
   /// No description provided for @requestDetailNoActionsDraft.
@@ -1698,6 +1716,24 @@ abstract class AppLocalizations {
   /// **'Lines (v{version})'**
   String quotationDetailLinesTitle(Object version);
 
+  /// No description provided for @quotationDetailLinesTitleWithCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Lines (v{version} · {count})'**
+  String quotationDetailLinesTitleWithCount(Object version, int count);
+
+  /// No description provided for @quotationDetailLineTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Line total: {total}'**
+  String quotationDetailLineTotalLabel(Object total);
+
+  /// No description provided for @quotationDetailLinesTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lines total'**
+  String get quotationDetailLinesTotalLabel;
+
   /// No description provided for @quotationDetailNoLines.
   ///
   /// In en, this message translates to:
@@ -1719,7 +1755,7 @@ abstract class AppLocalizations {
   /// No description provided for @quotationDetailFocSuffix.
   ///
   /// In en, this message translates to:
-  /// **' · FOC {focQuantity} {focUom}'**
+  /// **' · Discount {focQuantity} {focUom}'**
   String quotationDetailFocSuffix(Object focQuantity, Object focUom);
 
   /// No description provided for @quotationDetailActionsTitle.
@@ -1808,6 +1844,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Release full quotation into sales order'**
   String get quotationDetailReleaseButtonFullOnly;
+
+  /// No description provided for @quotationDetailResponseRecordedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer response recorded.'**
+  String get quotationDetailResponseRecordedMessage;
+
+  /// No description provided for @quotationDetailResponseSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer response'**
+  String get quotationDetailResponseSectionTitle;
+
+  /// No description provided for @quotationDetailResponseSectionNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Record what the customer told you — this replaces waiting on their own confirmation link, and an Accepted response unlocks releasing this quotation into a sales order.'**
+  String get quotationDetailResponseSectionNote;
+
+  /// No description provided for @quotationDetailResponseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Response'**
+  String get quotationDetailResponseLabel;
+
+  /// No description provided for @quotationDetailResponseAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get quotationDetailResponseAccepted;
+
+  /// No description provided for @quotationDetailResponseRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get quotationDetailResponseRejected;
+
+  /// No description provided for @quotationDetailResponseNegotiationRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiation requested'**
+  String get quotationDetailResponseNegotiationRequested;
+
+  /// No description provided for @quotationDetailResponseCustomerNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer name (optional)'**
+  String get quotationDetailResponseCustomerNameLabel;
+
+  /// No description provided for @quotationDetailResponseCommentsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Comments (optional)'**
+  String get quotationDetailResponseCommentsLabel;
+
+  /// No description provided for @quotationDetailResponseSubmitButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Record customer response'**
+  String get quotationDetailResponseSubmitButton;
 
   /// No description provided for @salesOrdersTitle.
   ///
@@ -2004,6 +2100,12 @@ abstract class AppLocalizations {
   /// **'Lines'**
   String get salesOrderDetailLinesTitle;
 
+  /// No description provided for @salesOrderDetailLinesTitleWithCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Lines ({count})'**
+  String salesOrderDetailLinesTitleWithCount(int count);
+
   /// No description provided for @salesOrderDetailNoLinesMessage.
   ///
   /// In en, this message translates to:
@@ -2025,7 +2127,7 @@ abstract class AppLocalizations {
   /// No description provided for @salesOrderDetailFocLabel.
   ///
   /// In en, this message translates to:
-  /// **'FOC {focQuantity}'**
+  /// **'Discount {focQuantity}'**
   String salesOrderDetailFocLabel(Object focQuantity);
 
   /// No description provided for @salesOrderDetailUnitPriceBeforeTax.
