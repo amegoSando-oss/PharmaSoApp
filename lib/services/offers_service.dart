@@ -9,6 +9,7 @@ import '../models/price_list.dart';
 import '../models/price_offer_request.dart';
 import '../models/warehouse.dart';
 import '../models/warehouse_item_stock.dart';
+import 'cached_fetch.dart';
 
 class OfferLineInput {
   final int itemId;
@@ -82,9 +83,12 @@ class OffersService {
   /// server then only returns items authorized via that rep's category
   /// mapping (mirrors RequestComposer.js's `api.items({ salesman_id })`),
   /// so the picker never offers an item the server would reject on submit.
-  Future<List<ItemEntry>> fetchItems({String? search, int? salesmanId}) async {
+  /// [perPage] defaults to a small page for the search-as-you-type item
+  /// picker — ReferenceCache asks for a much larger page instead, since it's
+  /// after this rep's *entire* catalog, not one page of search results.
+  Future<List<ItemEntry>> fetchItems({String? search, int? salesmanId, int perPage = 50}) async {
     final payload = await apiClient.get('/items', params: {
-      'per_page': 50,
+      'per_page': perPage,
       if (search != null && search.isNotEmpty) 'search': search,
       'salesman_id': ?salesmanId,
     });
@@ -100,6 +104,17 @@ class OffersService {
     return data.map((p) => EffectivePrice.fromJson(p as Map<String, dynamic>)).toList();
   }
 
+  /// Every effective price on [priceListId] (no `item_id` filter), cached as
+  /// a whole so a single line's guidance can be resolved offline without a
+  /// network round trip per item — see CreateOfferScreen's `_refreshGuidance`.
+  Future<List<EffectivePrice>> fetchEffectivePricesBulk(int priceListId) {
+    return CachedFetch.list(
+      key: 'effective_prices:$priceListId',
+      request: () async => (await apiClient.get('/price-lists/$priceListId/effective-prices')) as Map<String, dynamic>,
+      fromJson: EffectivePrice.fromJson,
+    );
+  }
+
   /// One item at a time, matching RequestComposer.js's loadLineStock — the
   /// endpoint accepts item_ids as an array, but the composer only ever
   /// needs stock for whichever single item was just picked on a line.
@@ -109,15 +124,25 @@ class OffersService {
     return data.map((s) => WarehouseItemStock.fromJson(s as Map<String, dynamic>)).toList();
   }
 
-  Future<List<PriceOfferRequestSummary>> listRequests({int page = 1, int perPage = 50}) async {
-    final payload = await apiClient.get('/price-offer-requests', params: {'page': page, 'per_page': perPage});
-    final data = (payload['data'] as List?) ?? const [];
-    return data.map((r) => PriceOfferRequestSummary.fromJson(r as Map<String, dynamic>)).toList();
+  // 500 rather than the old 50: with no pagination UI anywhere on this
+  // screen, this single call needs to represent this rep's *entire* list so
+  // both the screen and the offline cache it write-through's to have
+  // everything, not just the most recent page.
+  Future<List<PriceOfferRequestSummary>> listRequests({int page = 1, int perPage = 500}) {
+    return CachedFetch.list(
+      key: 'price_offer_requests_list',
+      request: () async =>
+          (await apiClient.get('/price-offer-requests', params: {'page': page, 'per_page': perPage})) as Map<String, dynamic>,
+      fromJson: PriceOfferRequestSummary.fromJson,
+    );
   }
 
-  Future<PriceOfferRequestDetail> getRequest(int id) async {
-    final payload = await apiClient.get('/price-offer-requests/$id');
-    return PriceOfferRequestDetail.fromEnvelope(payload as Map<String, dynamic>);
+  Future<PriceOfferRequestDetail> getRequest(int id) {
+    return CachedFetch.detail(
+      key: 'price_offer_request_detail:$id',
+      request: () async => (await apiClient.get('/price-offer-requests/$id')) as Map<String, dynamic>,
+      fromPayload: PriceOfferRequestDetail.fromEnvelope,
+    );
   }
 
   Future<int> createRequest({

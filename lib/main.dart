@@ -11,10 +11,12 @@ import 'l10n/generated/app_localizations.dart';
 import 'screens/splash_screen.dart';
 import 'services/auth_service.dart';
 import 'services/connection_status_service.dart';
+import 'services/data_sync_service.dart';
 import 'services/locale_provider.dart';
 import 'services/notifications_controller.dart';
 import 'services/notifications_service.dart';
 import 'services/offers_service.dart';
+import 'services/offline_sync_service.dart';
 import 'services/quotations_service.dart';
 import 'services/reference_cache.dart';
 import 'services/sales_orders_service.dart';
@@ -89,9 +91,19 @@ class PharmaSalesApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => AuthService(context.read<ApiClient>())),
         ChangeNotifierProvider(create: (context) => ConnectionStatusService(context.read<ApiClient>())..start()),
         Provider(create: (context) => OffersService(context.read<ApiClient>())),
+        ChangeNotifierProvider(create: (context) => OfflineSyncService(context.read<ApiClient>())),
         Provider(create: (context) => QuotationsService(context.read<ApiClient>())),
         Provider(create: (context) => SalesOrdersService(context.read<ApiClient>())),
         ChangeNotifierProvider(create: (context) => ReferenceCache(context.read<OffersService>())),
+        ChangeNotifierProvider(
+          create: (context) => DataSyncService(
+            context.read<OffersService>(),
+            context.read<QuotationsService>(),
+            context.read<SalesOrdersService>(),
+            context.read<ReferenceCache>(),
+            context.read<OfflineSyncService>(),
+          ),
+        ),
         Provider(create: (context) => RealtimeClient(context.read<ApiClient>())),
         Provider(create: (context) => NotificationsService(context.read<ApiClient>())),
         ChangeNotifierProvider(

@@ -92,6 +92,130 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeSignOutTooltip => 'Sign out';
 
   @override
+  String get syncStatusSyncing => 'Syncing offline requests…';
+
+  @override
+  String get syncStatusNeverSynced => 'Never synced';
+
+  @override
+  String syncStatusLastSuccess(Object time) {
+    return 'All offline requests synced $time';
+  }
+
+  @override
+  String syncStatusLastFailed(Object time) {
+    return 'Last sync $time had an error';
+  }
+
+  @override
+  String syncStatusLastOffline(Object time) {
+    return 'Last sync attempt $time failed — no connection';
+  }
+
+  @override
+  String syncStatusPendingCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count requests waiting to sync',
+      one: '1 request waiting to sync',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncStatusShortSyncing => 'Syncing…';
+
+  @override
+  String get syncStatusShortNever => 'Never synced';
+
+  @override
+  String get syncStatusShortFailed => 'Sync error';
+
+  @override
+  String get syncStatusShortOffline => 'Offline';
+
+  @override
+  String syncStatusShortPending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pending',
+      one: '1 pending',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncDialogTitle => 'Sync data';
+
+  @override
+  String get syncDialogRunningTitle => 'Syncing…';
+
+  @override
+  String get syncDialogResultSuccessTitle => 'Sync complete';
+
+  @override
+  String get syncDialogResultPartialTitle => 'Synced with some issues';
+
+  @override
+  String get syncDialogCancel => 'Cancel';
+
+  @override
+  String get syncDialogSyncNow => 'Sync now';
+
+  @override
+  String get syncDialogClose => 'Close';
+
+  @override
+  String get syncDialogConfirmIntro => 'This will:';
+
+  @override
+  String syncDialogConfirmUpload(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Upload $count offline price offers waiting to sync',
+      one: 'Upload 1 offline price offer waiting to sync',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncDialogConfirmReferenceData =>
+      'Refresh your customers, warehouses, items, price lists and warehouse stock';
+
+  @override
+  String get syncDialogConfirmRecords =>
+      'Refresh your price offer requests, quotations and sales orders';
+
+  @override
+  String get syncDialogStepUpload => 'Uploading offline price offers';
+
+  @override
+  String get syncDialogStepReferenceData =>
+      'Customers, warehouses, items & price lists';
+
+  @override
+  String get syncDialogStepOfflineReadiness =>
+      'Preparing offline request numbers';
+
+  @override
+  String get syncDialogStepEffectivePrices => 'Effective prices';
+
+  @override
+  String get syncDialogStepWarehouseStock => 'Warehouse stock';
+
+  @override
+  String get syncDialogStepPriceOfferRequests => 'Price offer requests';
+
+  @override
+  String get syncDialogStepQuotations => 'Quotations';
+
+  @override
+  String get syncDialogStepSalesOrders => 'Sales orders';
+
+  @override
   String get homePriceOfferTitle => 'Price Offer';
 
   @override
@@ -191,7 +315,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusQuotationGenerated => 'Quotation generated';
 
   @override
-  String get loginGenericError => 'Something went wrong. Please try again.';
+  String get loginOfflineError =>
+      'No internet connection. Signing in for the first time on this device needs a connection — if you\'ve signed in here before, just reopen the app instead.';
 
   @override
   String get loginSignInTitle => 'Sign in to your workspace';
@@ -270,6 +395,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get createOfferDraftCreatedSuccess => 'Price offer draft created.';
+
+  @override
+  String createOfferSavedOfflineSuccess(Object serial) {
+    return 'Saved offline as $serial. It will sync automatically once you\'re back online.';
+  }
 
   @override
   String get createOfferSubmitError =>
@@ -387,6 +517,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'No warehouse stock recorded for this item yet.';
 
   @override
+  String createOfferStockFromCache(Object time) {
+    return 'Last known stock · $time';
+  }
+
+  @override
+  String get createOfferGuidanceFromCache => 'Guidance from last sync';
+
+  @override
   String get createOfferAvailableLabel => 'Available';
 
   @override
@@ -477,6 +615,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get priceOffersSubmitButton => 'Submit';
+
+  @override
+  String get priceOffersSyncNowTooltip => 'Sync offline requests now';
+
+  @override
+  String priceOffersOfflineQueueTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count requests waiting to sync',
+      one: '1 request waiting to sync',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get priceOffersPendingSyncBadge => 'Pending sync';
+
+  @override
+  String get priceOffersSyncFailedBadge => 'Sync failed';
+
+  @override
+  String get priceOffersDiscardDraftTitle => 'Discard offline draft?';
+
+  @override
+  String priceOffersDiscardDraftMessage(Object serial) {
+    return 'This deletes $serial from this device without ever sending it to the server. This can\'t be undone.';
+  }
+
+  @override
+  String get priceOffersDiscardDraftConfirm => 'Discard';
 
   @override
   String get requestDetailTitle => 'Request detail';

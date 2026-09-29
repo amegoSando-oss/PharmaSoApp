@@ -15,6 +15,7 @@ import '../widgets/app_refresh_indicator.dart';
 import '../widgets/connection_status_badge.dart';
 import '../widgets/language_toggle.dart';
 import '../widgets/notification_bell.dart';
+import '../widgets/offline_sync_status_button.dart';
 import '../widgets/premium_menu_card.dart';
 import '../widgets/quick_stat_tile.dart';
 import 'create_offer_screen.dart';
@@ -218,6 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
+                  const OfflineSyncStatusButton(),
                 ],
               ),
             const SizedBox(height: AppSpacing.lg),

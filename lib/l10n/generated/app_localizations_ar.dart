@@ -91,6 +91,130 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeSignOutTooltip => 'تسجيل الخروج';
 
   @override
+  String get syncStatusSyncing => 'جارٍ مزامنة الطلبات غير المتصلة…';
+
+  @override
+  String get syncStatusNeverSynced => 'لم تتم المزامنة بعد';
+
+  @override
+  String syncStatusLastSuccess(Object time) {
+    return 'تمت مزامنة جميع الطلبات غير المتصلة $time';
+  }
+
+  @override
+  String syncStatusLastFailed(Object time) {
+    return 'حدث خطأ في آخر مزامنة $time';
+  }
+
+  @override
+  String syncStatusLastOffline(Object time) {
+    return 'فشلت آخر محاولة مزامنة $time — لا يوجد اتصال';
+  }
+
+  @override
+  String syncStatusPendingCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count طلبات بانتظار المزامنة',
+      one: 'طلب واحد بانتظار المزامنة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncStatusShortSyncing => 'جارٍ المزامنة…';
+
+  @override
+  String get syncStatusShortNever => 'لم تتم المزامنة';
+
+  @override
+  String get syncStatusShortFailed => 'خطأ مزامنة';
+
+  @override
+  String get syncStatusShortOffline => 'غير متصل';
+
+  @override
+  String syncStatusShortPending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'بانتظار $count',
+      one: 'بانتظار 1',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncDialogTitle => 'مزامنة البيانات';
+
+  @override
+  String get syncDialogRunningTitle => 'جاري المزامنة…';
+
+  @override
+  String get syncDialogResultSuccessTitle => 'اكتملت المزامنة';
+
+  @override
+  String get syncDialogResultPartialTitle => 'تمت المزامنة مع بعض المشاكل';
+
+  @override
+  String get syncDialogCancel => 'إلغاء';
+
+  @override
+  String get syncDialogSyncNow => 'مزامنة الآن';
+
+  @override
+  String get syncDialogClose => 'إغلاق';
+
+  @override
+  String get syncDialogConfirmIntro => 'سيقوم هذا بما يلي:';
+
+  @override
+  String syncDialogConfirmUpload(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'رفع $count من عروض الأسعار غير المتصلة بانتظار المزامنة',
+      one: 'رفع عرض سعر واحد غير متصل بانتظار المزامنة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncDialogConfirmReferenceData =>
+      'تحديث العملاء والمخازن والأصناف وقوائم الأسعار ورصيد المستودعات';
+
+  @override
+  String get syncDialogConfirmRecords =>
+      'تحديث طلبات عروض الأسعار وعروض الأسعار وأوامر البيع الخاصة بك';
+
+  @override
+  String get syncDialogStepUpload => 'جاري رفع عروض الأسعار غير المتصلة';
+
+  @override
+  String get syncDialogStepReferenceData =>
+      'العملاء والمخازن والأصناف وقوائم الأسعار';
+
+  @override
+  String get syncDialogStepOfflineReadiness =>
+      'تجهيز أرقام الطلبات غير المتصلة';
+
+  @override
+  String get syncDialogStepEffectivePrices => 'الأسعار الفعلية';
+
+  @override
+  String get syncDialogStepWarehouseStock => 'رصيد المستودعات';
+
+  @override
+  String get syncDialogStepPriceOfferRequests => 'طلبات عروض الأسعار';
+
+  @override
+  String get syncDialogStepQuotations => 'عروض الأسعار';
+
+  @override
+  String get syncDialogStepSalesOrders => 'أوامر البيع';
+
+  @override
   String get homePriceOfferTitle => 'عرض السعر';
 
   @override
@@ -189,7 +313,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get statusQuotationGenerated => 'تم إصدار عرض السعر';
 
   @override
-  String get loginGenericError => 'حدث خطأ ما. يرجى المحاولة مرة أخرى.';
+  String get loginOfflineError =>
+      'لا يوجد اتصال بالإنترنت. يتطلب تسجيل الدخول لأول مرة على هذا الجهاز اتصالاً — إذا سبق أن سجّلت الدخول هنا من قبل، فقط أعد فتح التطبيق.';
 
   @override
   String get loginSignInTitle => 'تسجيل الدخول إلى مساحة عملك';
@@ -268,6 +393,11 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get createOfferDraftCreatedSuccess =>
       'تم إنشاء مسودة عرض السعر بنجاح.';
+
+  @override
+  String createOfferSavedOfflineSuccess(Object serial) {
+    return 'تم الحفظ دون اتصال برقم $serial. ستتم المزامنة تلقائيًا عند عودة الاتصال.';
+  }
 
   @override
   String get createOfferSubmitError => 'فشل إنشاء طلب عرض السعر.';
@@ -384,6 +514,14 @@ class AppLocalizationsAr extends AppLocalizations {
       'لا يوجد رصيد مستودع مسجل لهذا الصنف حتى الآن.';
 
   @override
+  String createOfferStockFromCache(Object time) {
+    return 'آخر رصيد معروف · $time';
+  }
+
+  @override
+  String get createOfferGuidanceFromCache => 'إرشادات من آخر مزامنة';
+
+  @override
   String get createOfferAvailableLabel => 'المتاح';
 
   @override
@@ -473,6 +611,37 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get priceOffersSubmitButton => 'إرسال';
+
+  @override
+  String get priceOffersSyncNowTooltip => 'مزامنة الطلبات غير المتصلة الآن';
+
+  @override
+  String priceOffersOfflineQueueTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count طلبات بانتظار المزامنة',
+      one: 'طلب واحد بانتظار المزامنة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get priceOffersPendingSyncBadge => 'بانتظار المزامنة';
+
+  @override
+  String get priceOffersSyncFailedBadge => 'فشلت المزامنة';
+
+  @override
+  String get priceOffersDiscardDraftTitle => 'تجاهل المسودة غير المتصلة؟';
+
+  @override
+  String priceOffersDiscardDraftMessage(Object serial) {
+    return 'سيؤدي هذا إلى حذف $serial من هذا الجهاز دون إرساله إلى الخادم إطلاقًا. لا يمكن التراجع عن هذا.';
+  }
+
+  @override
+  String get priceOffersDiscardDraftConfirm => 'تجاهل';
 
   @override
   String get requestDetailTitle => 'تفاصيل الطلب';

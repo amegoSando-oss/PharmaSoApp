@@ -254,6 +254,186 @@ abstract class AppLocalizations {
   /// **'Sign out'**
   String get homeSignOutTooltip;
 
+  /// No description provided for @syncStatusSyncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing offline requests…'**
+  String get syncStatusSyncing;
+
+  /// No description provided for @syncStatusNeverSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Never synced'**
+  String get syncStatusNeverSynced;
+
+  /// No description provided for @syncStatusLastSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'All offline requests synced {time}'**
+  String syncStatusLastSuccess(Object time);
+
+  /// No description provided for @syncStatusLastFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Last sync {time} had an error'**
+  String syncStatusLastFailed(Object time);
+
+  /// No description provided for @syncStatusLastOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Last sync attempt {time} failed — no connection'**
+  String syncStatusLastOffline(Object time);
+
+  /// No description provided for @syncStatusPendingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 request waiting to sync} other{{count} requests waiting to sync}}'**
+  String syncStatusPendingCount(int count);
+
+  /// No description provided for @syncStatusShortSyncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing…'**
+  String get syncStatusShortSyncing;
+
+  /// No description provided for @syncStatusShortNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never synced'**
+  String get syncStatusShortNever;
+
+  /// No description provided for @syncStatusShortFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync error'**
+  String get syncStatusShortFailed;
+
+  /// No description provided for @syncStatusShortOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get syncStatusShortOffline;
+
+  /// No description provided for @syncStatusShortPending.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 pending} other{{count} pending}}'**
+  String syncStatusShortPending(int count);
+
+  /// No description provided for @syncDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync data'**
+  String get syncDialogTitle;
+
+  /// No description provided for @syncDialogRunningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing…'**
+  String get syncDialogRunningTitle;
+
+  /// No description provided for @syncDialogResultSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync complete'**
+  String get syncDialogResultSuccessTitle;
+
+  /// No description provided for @syncDialogResultPartialTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Synced with some issues'**
+  String get syncDialogResultPartialTitle;
+
+  /// No description provided for @syncDialogCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get syncDialogCancel;
+
+  /// No description provided for @syncDialogSyncNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get syncDialogSyncNow;
+
+  /// No description provided for @syncDialogClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get syncDialogClose;
+
+  /// No description provided for @syncDialogConfirmIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'This will:'**
+  String get syncDialogConfirmIntro;
+
+  /// No description provided for @syncDialogConfirmUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Upload 1 offline price offer waiting to sync} other{Upload {count} offline price offers waiting to sync}}'**
+  String syncDialogConfirmUpload(int count);
+
+  /// No description provided for @syncDialogConfirmReferenceData.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh your customers, warehouses, items, price lists and warehouse stock'**
+  String get syncDialogConfirmReferenceData;
+
+  /// No description provided for @syncDialogConfirmRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh your price offer requests, quotations and sales orders'**
+  String get syncDialogConfirmRecords;
+
+  /// No description provided for @syncDialogStepUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading offline price offers'**
+  String get syncDialogStepUpload;
+
+  /// No description provided for @syncDialogStepReferenceData.
+  ///
+  /// In en, this message translates to:
+  /// **'Customers, warehouses, items & price lists'**
+  String get syncDialogStepReferenceData;
+
+  /// No description provided for @syncDialogStepOfflineReadiness.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing offline request numbers'**
+  String get syncDialogStepOfflineReadiness;
+
+  /// No description provided for @syncDialogStepEffectivePrices.
+  ///
+  /// In en, this message translates to:
+  /// **'Effective prices'**
+  String get syncDialogStepEffectivePrices;
+
+  /// No description provided for @syncDialogStepWarehouseStock.
+  ///
+  /// In en, this message translates to:
+  /// **'Warehouse stock'**
+  String get syncDialogStepWarehouseStock;
+
+  /// No description provided for @syncDialogStepPriceOfferRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Price offer requests'**
+  String get syncDialogStepPriceOfferRequests;
+
+  /// No description provided for @syncDialogStepQuotations.
+  ///
+  /// In en, this message translates to:
+  /// **'Quotations'**
+  String get syncDialogStepQuotations;
+
+  /// No description provided for @syncDialogStepSalesOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales orders'**
+  String get syncDialogStepSalesOrders;
+
   /// No description provided for @homePriceOfferTitle.
   ///
   /// In en, this message translates to:
@@ -446,11 +626,11 @@ abstract class AppLocalizations {
   /// **'Quotation generated'**
   String get statusQuotationGenerated;
 
-  /// No description provided for @loginGenericError.
+  /// No description provided for @loginOfflineError.
   ///
   /// In en, this message translates to:
-  /// **'Something went wrong. Please try again.'**
-  String get loginGenericError;
+  /// **'No internet connection. Signing in for the first time on this device needs a connection — if you\'ve signed in here before, just reopen the app instead.'**
+  String get loginOfflineError;
 
   /// No description provided for @loginSignInTitle.
   ///
@@ -589,6 +769,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Price offer draft created.'**
   String get createOfferDraftCreatedSuccess;
+
+  /// No description provided for @createOfferSavedOfflineSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved offline as {serial}. It will sync automatically once you\'re back online.'**
+  String createOfferSavedOfflineSuccess(Object serial);
 
   /// No description provided for @createOfferSubmitError.
   ///
@@ -800,6 +986,18 @@ abstract class AppLocalizations {
   /// **'No warehouse stock recorded for this item yet.'**
   String get createOfferNoWarehouseStock;
 
+  /// No description provided for @createOfferStockFromCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Last known stock · {time}'**
+  String createOfferStockFromCache(Object time);
+
+  /// No description provided for @createOfferGuidanceFromCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Guidance from last sync'**
+  String get createOfferGuidanceFromCache;
+
   /// No description provided for @createOfferAvailableLabel.
   ///
   /// In en, this message translates to:
@@ -967,6 +1165,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Submit'**
   String get priceOffersSubmitButton;
+
+  /// No description provided for @priceOffersSyncNowTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync offline requests now'**
+  String get priceOffersSyncNowTooltip;
+
+  /// No description provided for @priceOffersOfflineQueueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 request waiting to sync} other{{count} requests waiting to sync}}'**
+  String priceOffersOfflineQueueTitle(int count);
+
+  /// No description provided for @priceOffersPendingSyncBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending sync'**
+  String get priceOffersPendingSyncBadge;
+
+  /// No description provided for @priceOffersSyncFailedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync failed'**
+  String get priceOffersSyncFailedBadge;
+
+  /// No description provided for @priceOffersDiscardDraftTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard offline draft?'**
+  String get priceOffersDiscardDraftTitle;
+
+  /// No description provided for @priceOffersDiscardDraftMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This deletes {serial} from this device without ever sending it to the server. This can\'t be undone.'**
+  String priceOffersDiscardDraftMessage(Object serial);
+
+  /// No description provided for @priceOffersDiscardDraftConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get priceOffersDiscardDraftConfirm;
 
   /// No description provided for @requestDetailTitle.
   ///

@@ -17,6 +17,8 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+typedef UnauthenticatedCallback = Future<bool> Function();
+
 /// Thin JSON wrapper around [http], mirroring resources/js/core/api.js:
 /// bearer-token auth, an Idempotency-Key header on mutating calls, and the
 /// same error-message extraction (errors[0].message / errors map / message).
@@ -27,6 +29,7 @@ class ApiClient {
   static const _timeout = Duration(seconds: 10);
 
   String? _token;
+  UnauthenticatedCallback? onUnauthenticated;
 
   String? get token => _token;
 
@@ -93,9 +96,31 @@ class ApiClient {
     return 'Request failed ($statusCode)';
   }
 
-  Future<dynamic> get(String path, {Map<String, dynamic>? params}) async {
-    final response = await http.get(_uri(path, params), headers: _headers()).timeout(_timeout);
+  Future<dynamic> _request(
+    String path,
+    Future<http.Response> Function() requestFn,
+  ) async {
+    final response = await requestFn().timeout(_timeout);
+    if (response.statusCode == 401 &&
+        onUnauthenticated != null &&
+        path != '/auth/token' &&
+        path != '/auth/revoke') {
+      debugPrint('[ApiClient] Received 401 for $path. Attempting silent token refresh...');
+      final renewed = await onUnauthenticated!();
+      if (renewed) {
+        debugPrint('[ApiClient] Silent token refresh succeeded! Retrying request for $path...');
+        final retryResponse = await requestFn().timeout(_timeout);
+        return _decode(retryResponse);
+      }
+    }
     return _decode(response);
+  }
+
+  Future<dynamic> get(String path, {Map<String, dynamic>? params}) async {
+    return _request(
+      path,
+      () => http.get(_uri(path, params), headers: _headers()),
+    );
   }
 
   /// Unauthenticated reachability probe for [ConnectionStatusService] — hits
@@ -109,32 +134,56 @@ class ApiClient {
   }
 
   Future<dynamic> post(String path, {Map<String, dynamic>? body, String prefix = 'action'}) async {
-    final response = await http.post(
-      _uri(path),
-      headers: _headers(mutating: true, prefix: prefix),
-      body: jsonEncode(body ?? {}),
-    ).timeout(_timeout);
-    return _decode(response);
+    return _request(
+      path,
+      () => http.post(
+        _uri(path),
+        headers: _headers(mutating: true, prefix: prefix),
+        body: jsonEncode(body ?? {}),
+      ),
+    );
   }
 
   Future<dynamic> patch(String path, {Map<String, dynamic>? body, String prefix = 'action'}) async {
-    final response = await http.patch(
-      _uri(path),
-      headers: _headers(mutating: true, prefix: prefix),
-      body: jsonEncode(body ?? {}),
-    ).timeout(_timeout);
-    return _decode(response);
+    return _request(
+      path,
+      () => http.patch(
+        _uri(path),
+        headers: _headers(mutating: true, prefix: prefix),
+        body: jsonEncode(body ?? {}),
+      ),
+    );
   }
 
   Future<dynamic> delete(String path, {String prefix = 'action'}) async {
-    final response = await http.delete(_uri(path), headers: _headers(mutating: true, prefix: prefix)).timeout(_timeout);
-    return _decode(response);
+    return _request(
+      path,
+      () => http.delete(_uri(path), headers: _headers(mutating: true, prefix: prefix)),
+    );
   }
 
   /// For binary responses (e.g. the quotation PDF), which aren't JSON.
   Future<Uint8List> getBytes(String path) async {
-    final headers = _headers()..['Accept'] = '*/*';
-    final response = await http.get(_uri(path), headers: headers).timeout(const Duration(seconds: 30));
+    Future<http.Response> requestFn() {
+      final headers = _headers()..['Accept'] = '*/*';
+      return http.get(_uri(path), headers: headers);
+    }
+
+    final response = await requestFn().timeout(const Duration(seconds: 30));
+    if (response.statusCode == 401 &&
+        onUnauthenticated != null &&
+        path != '/auth/token' &&
+        path != '/auth/revoke') {
+      debugPrint('[ApiClient] getBytes received 401 for $path. Attempting silent token refresh...');
+      final renewed = await onUnauthenticated!();
+      if (renewed) {
+        debugPrint('[ApiClient] Silent token refresh succeeded! Retrying getBytes for $path...');
+        final retryResponse = await requestFn().timeout(const Duration(seconds: 30));
+        if (retryResponse.statusCode >= 200 && retryResponse.statusCode < 300) {
+          return retryResponse.bodyBytes;
+        }
+      }
+    }
     debugPrint('[ApiClient] GET ${response.request?.url} -> ${response.statusCode} (bytes: ${response.bodyBytes.length})');
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(_extractError(null, response.statusCode), statusCode: response.statusCode);

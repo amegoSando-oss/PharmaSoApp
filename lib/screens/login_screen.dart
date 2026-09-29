@@ -60,10 +60,10 @@ class _LoginScreenState extends State<LoginScreen> {
       _loading = true;
       _error = null;
     });
+    final auth = context.read<AuthService>();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
     try {
-      final auth = context.read<AuthService>();
-      final email = _emailController.text.trim();
-      final password = _passwordController.text;
       await auth.login(email, password);
       if (_rememberMe) {
         await auth.saveRememberedCredentials(email, password);
@@ -77,9 +77,22 @@ class _LoginScreenState extends State<LoginScreen> {
     } on ApiException catch (e) {
       HapticFeedback.lightImpact();
       setState(() => _error = e.message);
-    } catch (e) {
+    } catch (_) {
+      // No response at all — offline. The only way to still let this rep
+      // in without a server round trip is if these are the exact
+      // credentials "Remember me" saved from a prior online login on this
+      // device, and that login's token + profile are still cached — see
+      // AuthService.loginOffline's doc comment.
+      final signedInOffline = await auth.loginOffline(email, password);
+      if (signedInOffline) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          heroPageRoute((_) => const HomeScreen()),
+        );
+        return;
+      }
       HapticFeedback.lightImpact();
-      setState(() => _error = AppLocalizations.of(context).loginGenericError);
+      if (mounted) setState(() => _error = AppLocalizations.of(context).loginOfflineError);
     } finally {
       if (mounted) setState(() => _loading = false);
     }

@@ -9,8 +9,10 @@ import '../core/realtime_client.dart';
 import '../core/text_utils.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../models/customer.dart';
+import '../models/offline_price_offer.dart';
 import '../models/price_offer_request.dart';
 import '../services/offers_service.dart';
+import '../services/offline_sync_service.dart';
 import '../services/reference_cache.dart';
 import '../theme/app_spacing.dart';
 import '../theme/status_style.dart';
@@ -23,6 +25,7 @@ import '../widgets/notification_bell.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/status_filter_bar.dart';
 import '../widgets/status_pill.dart';
+import '../widgets/sync_dialog.dart';
 import 'create_offer_screen.dart';
 import 'request_detail_screen.dart';
 
@@ -48,6 +51,9 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> {
   Timer? _pollTimer;
   VoidCallback? _unsubscribeLiveUpdate;
 
+  late final OfflineSyncService _offlineSync;
+  List<OfflinePriceOffer> _offlineDrafts = [];
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +70,13 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> {
     // where Reverb isn't running (see docs/business-logic.md §12a).
     _pollTimer = Timer.periodic(const Duration(seconds: 90), (_) => _refresh());
     _unsubscribeLiveUpdate = context.read<RealtimeClient>().onLiveUpdate('price-offers', (_) => _refresh());
+
+    // Offline drafts (still queued locally, not yet synced) — kept in sync
+    // with OfflineSyncService so this list updates the moment a record is
+    // created offline, synced away, or fails to sync.
+    _offlineSync = context.read<OfflineSyncService>();
+    _offlineSync.addListener(_onOfflineSyncChanged);
+    _loadOfflineDrafts();
   }
 
   @override
@@ -71,7 +84,38 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> {
     _searchController.dispose();
     _pollTimer?.cancel();
     _unsubscribeLiveUpdate?.call();
+    _offlineSync.removeListener(_onOfflineSyncChanged);
     super.dispose();
+  }
+
+  void _onOfflineSyncChanged() {
+    _loadOfflineDrafts();
+    // A batch may have just finished syncing successfully — the real
+    // records are now on the server, so refresh the main list too.
+    _refresh();
+  }
+
+  Future<void> _loadOfflineDrafts() async {
+    final drafts = await _offlineSync.listPending();
+    if (mounted) setState(() => _offlineDrafts = drafts);
+  }
+
+  Future<void> _discardDraft(OfflinePriceOffer draft) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.priceOffersDiscardDraftTitle),
+        content: Text(l10n.priceOffersDiscardDraftMessage(draft.serial)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l10n.priceOffersNotNow)),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l10n.priceOffersDiscardDraftConfirm)),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _offlineSync.discard(draft.clientUuid);
+    }
   }
 
   Future<List<PriceOfferRequestSummary>> _load() {
@@ -210,10 +254,26 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.priceOffersTitle),
-        actions: const [ConnectionStatusBadge(), NotificationBell()],
+        actions: [
+          if (_offlineDrafts.isNotEmpty)
+            IconButton(
+              tooltip: l10n.priceOffersSyncNowTooltip,
+              icon: _offlineSync.busy
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.sync),
+              onPressed: _offlineSync.busy ? null : () => SyncDialog.show(context),
+            ),
+          const ConnectionStatusBadge(),
+          const NotificationBell(),
+        ],
       ),
       body: Column(
         children: [
+          if (_offlineDrafts.isNotEmpty) _OfflineDraftsSection(drafts: _offlineDrafts, reference: reference, onDiscard: _discardDraft),
           Padding(
             padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.sm),
             child: Column(
@@ -700,6 +760,116 @@ class _QuickSubmitSheetState extends State<_QuickSubmitSheet> {
                 ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Price offer requests created fully offline and still queued locally —
+/// not yet on the server, so they can't show up in the main list (which
+/// comes straight from GET /price-offer-requests). Shown separately, using
+/// the reserved serial as their display number, until they sync (at which
+/// point OfflineSyncService drops them and the real record appears in the
+/// main list instead).
+class _OfflineDraftsSection extends StatelessWidget {
+  final List<OfflinePriceOffer> drafts;
+  final ReferenceCache reference;
+  final ValueChanged<OfflinePriceOffer> onDiscard;
+
+  const _OfflineDraftsSection({required this.drafts, required this.reference, required this.onDiscard});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Text(
+              l10n.priceOffersOfflineQueueTitle(drafts.length),
+              style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+          ...drafts.map((draft) => _OfflineDraftCard(draft: draft, reference: reference, onDiscard: () => onDiscard(draft))),
+        ],
+      ),
+    );
+  }
+}
+
+class _OfflineDraftCard extends StatelessWidget {
+  final OfflinePriceOffer draft;
+  final ReferenceCache reference;
+  final VoidCallback onDiscard;
+
+  const _OfflineDraftCard({required this.draft, required this.reference, required this.onDiscard});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final failed = draft.status == OfflineSyncStatus.failed;
+    final badgeColor = failed ? theme.colorScheme.error : theme.colorScheme.primary;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(draft.serial, style: const TextStyle(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 2),
+                      Text(
+                        reference.customerName(draft.customerId),
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    failed ? l10n.priceOffersSyncFailedBadge : l10n.priceOffersPendingSyncBadge,
+                    style: theme.textTheme.labelSmall?.copyWith(color: badgeColor, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                IconButton(
+                  tooltip: l10n.priceOffersDiscardDraftConfirm,
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  onPressed: onDiscard,
+                ),
+              ],
+            ),
+            if (failed && draft.syncError != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                draft.syncError!,
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+              ),
+            ],
           ],
         ),
       ),

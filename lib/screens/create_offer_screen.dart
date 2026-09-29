@@ -1,14 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/api_client.dart';
+import '../core/text_utils.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../models/customer.dart';
 import '../models/effective_price.dart';
 import '../models/item.dart';
+import '../models/offline_price_offer.dart';
 import '../models/price_list.dart';
 import '../models/warehouse_item_stock.dart';
+import '../services/connection_status_service.dart';
 import '../services/offers_service.dart';
+import '../services/offline_sync_service.dart';
+import '../services/reference_cache.dart';
+import '../services/warehouse_stock_cache.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/app_refresh_indicator.dart';
 import '../widgets/connection_status_badge.dart';
@@ -25,9 +33,17 @@ class _LineForm {
   ItemEntry? item;
   EffectivePrice? guidance;
   bool guidanceLoading = false;
+  // Set when [guidance] came from the last-known bulk effective-prices
+  // cache (an offline/failed fetch fallback) rather than a fresh per-item
+  // server response — mirrors [stockCachedAt] below.
+  bool guidanceFromCache = false;
   List<WarehouseItemStock> stock = [];
   bool stockLoading = false;
   String? stockError;
+  // Set when [stock] came from WarehouseStockCache (an offline/failed
+  // fetch fallback) rather than a fresh server response — lets the UI tell
+  // the rep it might not be current.
+  DateTime? stockCachedAt;
   final quantityController = TextEditingController();
   final priceController = TextEditingController();
   // Informational flag only for the approver (0-100) — mirrors web's
@@ -92,24 +108,34 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
       _loading = true;
       _loadError = null;
     });
+    final reference = context.read<ReferenceCache>();
     try {
-      final offers = context.read<OffersService>();
-      final results = await Future.wait([
-        offers.fetchCustomers(),
-        offers.fetchPriceLists(),
-        offers.fetchItems(),
-      ]);
-      setState(() {
-        _customers = results[0] as List<Customer>;
-        _priceLists = results[1] as List<PriceListEntry>;
-        _items = results[2] as List<ItemEntry>;
-      });
+      await reference.ensureLoaded(force: true);
     } on ApiException catch (e) {
-      setState(() => _loadError = e.message);
+      // A real server error (as opposed to no response at all) only matters
+      // if there's nothing at all to fall back on — ReferenceCache already
+      // hydrated itself from disk in this case if it had anything cached.
+      if (reference.customers.isEmpty) {
+        if (mounted) setState(() => _loadError = e.message);
+      }
     } catch (_) {
-      setState(() => _loadError = AppLocalizations.of(context).createOfferLoadError);
+      // No ApiException means the request never got a response at all —
+      // most likely offline. ReferenceCache falls back to its persisted
+      // copy on disk automatically, so a rep who's gone offline mid-trip
+      // (even after restarting the app) can still compose new offers
+      // against last-known customers/warehouses/price lists/items.
+      if (reference.customers.isEmpty) {
+        if (mounted) setState(() => _loadError = AppLocalizations.of(context).createOfferLoadError);
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _customers = reference.customers;
+          _priceLists = reference.priceLists;
+          _items = reference.items;
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -117,22 +143,18 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
   /// lists/items without blanking the form out to a full-screen spinner —
   /// the in-progress line items the rep is filling in stay put.
   Future<void> _pullRefresh() async {
+    final reference = context.read<ReferenceCache>();
     try {
-      final offers = context.read<OffersService>();
-      final results = await Future.wait([
-        offers.fetchCustomers(),
-        offers.fetchPriceLists(),
-        offers.fetchItems(),
-      ]);
-      if (!mounted) return;
-      setState(() {
-        _customers = results[0] as List<Customer>;
-        _priceLists = results[1] as List<PriceListEntry>;
-        _items = results[2] as List<ItemEntry>;
-      });
+      await reference.ensureLoaded(force: true);
     } catch (_) {
       // Background refresh — keep whatever was already loaded on failure.
     }
+    if (!mounted) return;
+    setState(() {
+      _customers = reference.customers;
+      _priceLists = reference.priceLists;
+      _items = reference.items;
+    });
   }
 
   /// Mirrors RequestComposer.js's refreshGuidanceLine: shows the active
@@ -148,20 +170,39 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
   Future<void> _refreshGuidance(_LineForm line) async {
     if (line.item == null || _activePriceList == null) return;
     setState(() => line.guidanceLoading = true);
+    final priceListId = _activePriceList!.id;
+    final itemId = line.item!.id;
     try {
-      final results = await context.read<OffersService>().fetchEffectivePrices(_activePriceList!.id, itemId: line.item!.id);
+      final results = await context.read<OffersService>().fetchEffectivePrices(priceListId, itemId: itemId);
       if (!mounted) return;
       setState(() {
+        line.guidanceFromCache = false;
         line.guidance = results.isNotEmpty ? results.first : null;
-        final defaultPrice = line.guidance?.effectivePrice;
-        if (defaultPrice != null && line.priceController.text.trim().isEmpty) {
-          line.priceController.text = defaultPrice.toStringAsFixed(2);
-        }
+        _applyGuidanceDefaultPrice(line);
       });
     } catch (_) {
-      if (mounted) setState(() => line.guidance = null);
+      // No response at all (offline) — fall back to this price list's
+      // last-known bulk effective prices rather than clearing guidance.
+      final results = await context.read<OffersService>().fetchEffectivePricesBulk(priceListId).catchError((_) => <EffectivePrice>[]);
+      if (!mounted) return;
+      final matches = results.where((p) => p.itemId == itemId);
+      setState(() {
+        line.guidanceFromCache = true;
+        line.guidance = matches.isEmpty ? null : matches.first;
+        _applyGuidanceDefaultPrice(line);
+      });
     } finally {
       if (mounted) setState(() => line.guidanceLoading = false);
+    }
+  }
+
+  /// Fills the proposed price with the guidance's effective price the first
+  /// time guidance loads for this line, but only while the field is still
+  /// empty — never overwrites a price the user already typed.
+  void _applyGuidanceDefaultPrice(_LineForm line) {
+    final defaultPrice = line.guidance?.effectivePrice;
+    if (defaultPrice != null && line.priceController.text.trim().isEmpty) {
+      line.priceController.text = defaultPrice.toStringAsFixed(2);
     }
   }
 
@@ -173,17 +214,34 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
     setState(() {
       line.stock = [];
       line.stockError = null;
+      line.stockCachedAt = null;
     });
     if (line.item == null) return;
+    final itemId = line.item!.id;
     setState(() => line.stockLoading = true);
     try {
-      final results = await context.read<OffersService>().fetchWarehouseStockForItem(line.item!.id);
+      final results = await context.read<OffersService>().fetchWarehouseStockForItem(itemId);
       if (!mounted) return;
       setState(() => line.stock = results);
-    } on ApiException catch (e) {
-      if (mounted) setState(() => line.stockError = e.message);
-    } catch (_) {
-      if (mounted) setState(() => line.stockError = AppLocalizations.of(context).createOfferStockLoadError);
+      // Best-effort: keep the last-known figures around locally so this
+      // same section can still show something useful while offline.
+      unawaited(WarehouseStockCache.instance.save(itemId, results));
+    } catch (error) {
+      // Covers both a real server error (ApiException) and no response at
+      // all (offline) — either way, fall back to whatever was cached from
+      // an earlier successful fetch of this item rather than leaving the
+      // section blank/erroring.
+      final cached = await WarehouseStockCache.instance.load(itemId);
+      if (!mounted) return;
+      if (cached != null) {
+        setState(() {
+          line.stock = cached.stock;
+          line.stockCachedAt = cached.cachedAt;
+        });
+      } else {
+        setState(() => line.stockError =
+            error is ApiException ? error.message : AppLocalizations.of(context).createOfferStockLoadError);
+      }
     } finally {
       if (mounted) setState(() => line.stockLoading = false);
     }
@@ -297,7 +355,34 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
       _saving = true;
       _submitError = null;
     });
+
+    final l10n = AppLocalizations.of(context);
+    final isOffline = context.read<ConnectionStatusService>().quality == ConnectionQuality.offline;
+
     try {
+      if (isOffline) {
+        final record = await context.read<OfflineSyncService>().createOffline(
+              customerId: _selectedCustomer!.id,
+              salesmanId: _selectedCustomer!.activeSalesman!.id,
+              priceListId: _activePriceList!.id,
+              lines: _lines
+                  .map((l) => OfflineOfferLine(
+                        itemId: l.item!.id,
+                        itemName: l.item!.name,
+                        quantity: num.parse(l.quantityController.text),
+                        proposedPrice: num.parse(l.priceController.text),
+                        focPercent: num.tryParse(l.focPercentController.text),
+                      ))
+                  .toList(),
+            );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.createOfferSavedOfflineSuccess(record.serial))),
+        );
+        Navigator.of(context).pop(true);
+        return;
+      }
+
       final offers = context.read<OffersService>();
       await offers.createRequest(
         customerId: _selectedCustomer!.id,
@@ -314,13 +399,16 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).createOfferDraftCreatedSuccess)),
+        SnackBar(content: Text(l10n.createOfferDraftCreatedSuccess)),
       );
       Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       setState(() => _submitError = e.message);
+    } on StateError catch (e) {
+      // No local serial reserved for this salesman yet (createOffline).
+      setState(() => _submitError = e.message);
     } catch (_) {
-      setState(() => _submitError = AppLocalizations.of(context).createOfferSubmitError);
+      setState(() => _submitError = l10n.createOfferSubmitError);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -365,7 +453,19 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
                       items: _customers
                           .map((c) => DropdownMenuItem(value: c, child: Text(c.name, overflow: TextOverflow.ellipsis)))
                           .toList(),
-                      onChanged: (c) => setState(() => _selectedCustomer = c),
+                      onChanged: (c) {
+                        setState(() => _selectedCustomer = c);
+                        // Opportunistically top up this salesman's reserved
+                        // offline request numbers while we still have a
+                        // connection — a no-op if plenty are already
+                        // stashed locally, and silently skipped if this
+                        // turns out to be offline too (nothing lost: it'll
+                        // just fail to reserve, same as before this call).
+                        final salesmanId = c?.activeSalesman?.id;
+                        if (salesmanId != null) {
+                          context.read<OfflineSyncService>().ensureReservation(salesmanId).catchError((_) {});
+                        }
+                      },
                     ),
                     const SizedBox(height: AppSpacing.md),
                     PersonTile(
@@ -542,7 +642,21 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
                 l10n.createOfferLoadingActivePrice,
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline, fontStyle: FontStyle.italic),
               )
-            else if (line.guidance != null)
+            else if (line.guidance != null) ...[
+              if (line.guidanceFromCache) ...[
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.history, size: 12, color: theme.colorScheme.outline),
+                    const SizedBox(width: 4),
+                    Text(
+                      l10n.createOfferGuidanceFromCache,
+                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline, fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+              ],
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
@@ -568,7 +682,8 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
                   if (line.guidance!.isUpcoming)
                     _GuidanceChip(label: l10n.createOfferGuidanceStarts, value: line.guidance!.effectiveFrom ?? '—', warn: true),
                 ],
-              )
+              ),
+            ]
             else
               Text(
                 l10n.createOfferNoActivePriceForItem,
@@ -773,7 +888,23 @@ class _WarehouseStockSection extends StatelessWidget {
             l10n.createOfferNoWarehouseStock,
             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline, fontStyle: FontStyle.italic),
           )
-        else
+        else ...[
+          if (line.stockCachedAt != null) ...[
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.history, size: 12, color: theme.colorScheme.outline),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    l10n.createOfferStockFromCache(formatRelativeTime(line.stockCachedAt!)),
+                    style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline, fontStyle: FontStyle.italic),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+          ],
           SizedBox(
             height: 98,
             child: ListView.separated(
@@ -783,6 +914,7 @@ class _WarehouseStockSection extends StatelessWidget {
               itemBuilder: (context, i) => _WarehouseStockCard(stock: line.stock[i]),
             ),
           ),
+        ],
       ],
     );
   }

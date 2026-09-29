@@ -1,15 +1,21 @@
 import '../core/api_client.dart';
 import '../models/quotation.dart';
+import 'cached_fetch.dart';
 
 class QuotationsService {
   final ApiClient apiClient;
 
   QuotationsService(this.apiClient);
 
-  Future<List<Quotation>> listQuotations({int page = 1, int perPage = 50}) async {
-    final payload = await apiClient.get('/quotations', params: {'page': page, 'per_page': perPage});
-    final data = (payload['data'] as List?) ?? const [];
-    return data.map((q) => Quotation.fromJson(q as Map<String, dynamic>)).toList();
+  // 500 rather than the old 50: no pagination UI exists for this list, so
+  // this single call needs to represent this rep's entire quotation history
+  // for both the screen and the offline cache it write-throughs to.
+  Future<List<Quotation>> listQuotations({int page = 1, int perPage = 500}) {
+    return CachedFetch.list(
+      key: 'quotations_list',
+      request: () async => (await apiClient.get('/quotations', params: {'page': page, 'per_page': perPage})) as Map<String, dynamic>,
+      fromJson: Quotation.fromJson,
+    );
   }
 
   /// There's no single-quotation GET endpoint (see Quotation's own doc
