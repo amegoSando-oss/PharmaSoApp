@@ -817,13 +817,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get requestDetailCreateSalesOrderButton => 'إنشاء أمر بيع';
 
   @override
-  String get relatedRecordsViewQuotationButton => 'عرض عرض السعر';
+  String get relatedRecordsViewQuotationButton => 'اظهار عرض السعر';
 
   @override
   String get relatedRecordsViewSalesOrderButton => 'عرض أمر البيع';
 
   @override
-  String get relatedRecordsViewRequestButton => 'عرض طلب عرض السعر';
+  String get relatedRecordsViewRequestButton => 'اظهار طلب عرض السعر';
 
   @override
   String get relatedRecordsNoSalesOrderYet => 'لا يوجد أمر بيع بعد';
@@ -899,6 +899,59 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get quotationDetailOrderCreatedMessage => 'تم إنشاء أمر البيع.';
+
+  @override
+  String get quotationDetailCancelledMessage => 'تم إلغاء عرض السعر.';
+
+  @override
+  String get quotationDetailCancelButton => 'إلغاء عرض السعر';
+
+  @override
+  String get quotationDetailCancelConfirmTitle =>
+      'هل تريد إلغاء عرض السعر هذا؟';
+
+  @override
+  String get quotationDetailCancelConfirmMessage =>
+      'سيتم رفض كل سطر ما زال مفتوحًا في عرض السعر بكامل كميته المتبقية. لا يمكن التراجع عن هذا الإجراء، ولن يمكن تحويل أي منها إلى أمر بيع بعد ذلك.';
+
+  @override
+  String get quotationDetailCancelDismiss => 'ليس الآن';
+
+  @override
+  String get quotationDetailCancelConfirm => 'إلغاء عرض السعر';
+
+  @override
+  String get quotationDetailInsufficientStockTitle =>
+      'الكمية غير متوفرة في المخزن';
+
+  @override
+  String get quotationDetailInsufficientStockIntro =>
+      'الكميات التالية تتجاوز المتاح في المخزن المحدد:';
+
+  @override
+  String quotationDetailInsufficientStockLine(
+    Object itemName,
+    Object requested,
+    Object available,
+    Object uom,
+  ) {
+    return '$itemName: المطلوب $requested، المتاح فقط $available $uom';
+  }
+
+  @override
+  String get quotationDetailInsufficientStockSuggestion =>
+      'يمكنك إنشاء أمر البيع رغم ذلك، أو الإلغاء لتعديل الكميات أو اختيار مخزن آخر.';
+
+  @override
+  String get quotationDetailInsufficientStockCancel => 'إلغاء';
+
+  @override
+  String get quotationDetailInsufficientStockCreateAnyway =>
+      'إنشاء أمر البيع رغم ذلك';
+
+  @override
+  String get quotationDetailInsufficientStockCheckFailed =>
+      'تعذر التحقق من توفر الكمية بالمخزن. يرجى المحاولة مرة أخرى.';
 
   @override
   String get quotationDetailActionDoneMessage => 'تم بنجاح.';
@@ -1014,15 +1067,41 @@ class AppLocalizationsAr extends AppLocalizations {
   String get quotationDetailWarehouseLabel => 'المخزن';
 
   @override
+  String quotationDetailWarehouseAvailableOption(
+    Object warehouseName,
+    Object available,
+  ) {
+    return '$warehouseName — المتاح $available';
+  }
+
+  @override
+  String get quotationDetailSplitWarehouseButton => 'تقسيم على مخزن آخر';
+
+  @override
+  String quotationDetailAllocatedLabel(Object allocated, Object remaining) {
+    return 'المخصص $allocated / $remaining';
+  }
+
+  @override
+  String get quotationDetailWarehouseStockLabel => 'كمية المخزون';
+
+  @override
+  String get quotationDetailRefreshStockTooltip => 'تحديث الكمية المتاحة';
+
+  @override
+  String quotationDetailMaxAvailableHint(Object max) {
+    return 'الحد الأقصى $max في هذا المخزن — أضف مخزنًا آخر للكمية المتبقية';
+  }
+
+  @override
   String get quotationDetailFillFullRemainingButton =>
       'ملء كامل الكمية المتبقية';
 
   @override
-  String get quotationDetailReleaseButton => 'الإفراج إلى أمر بيع';
+  String get quotationDetailReleaseButton => 'إنشاء أمر بيع';
 
   @override
-  String get quotationDetailReleaseButtonFullOnly =>
-      'الإفراج عن كامل عرض السعر إلى أمر بيع';
+  String get quotationDetailReleaseButtonFullOnly => 'إنشاء أمر بيع';
 
   @override
   String get quotationDetailResponseRecordedMessage => 'تم تسجيل رد العميل.';

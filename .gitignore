@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local API config (contains environment-specific settings, not for GitHub)
+lib/core/api_config.dart

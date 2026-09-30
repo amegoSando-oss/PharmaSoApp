@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import '../core/api_client.dart';
 import 'data_cache.dart';
 
@@ -29,15 +31,20 @@ class CachedFetch {
       final payload = await request();
       final data = (payload['data'] as List?) ?? const [];
       final rows = data.cast<Map<String, dynamic>>();
+      debugPrint('[CachedFetch] list "$key" -> live fetch OK, ${rows.length} row(s), caching');
       unawaited(DataCache.instance.put(key, rows));
       return rows.map(fromJson).toList();
-    } on ApiException {
+    } on ApiException catch (e) {
+      debugPrint('[CachedFetch] list "$key" -> ApiException (${e.message}), NOT falling back to cache');
       rethrow;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[CachedFetch] list "$key" -> live fetch failed ($e), falling back to cache');
       final cached = await DataCache.instance.get(key);
       if (cached is List) {
+        debugPrint('[CachedFetch] list "$key" -> served ${cached.length} row(s) from cache');
         return cached.cast<Map<String, dynamic>>().map(fromJson).toList();
       }
+      debugPrint('[CachedFetch] list "$key" -> nothing cached, rethrowing');
       rethrow;
     }
   }
@@ -49,15 +56,20 @@ class CachedFetch {
   }) async {
     try {
       final payload = await request();
+      debugPrint('[CachedFetch] detail "$key" -> live fetch OK, caching');
       unawaited(DataCache.instance.put(key, payload));
       return fromPayload(payload);
-    } on ApiException {
+    } on ApiException catch (e) {
+      debugPrint('[CachedFetch] detail "$key" -> ApiException (${e.message}), NOT falling back to cache');
       rethrow;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[CachedFetch] detail "$key" -> live fetch failed ($e), falling back to cache');
       final cached = await DataCache.instance.get(key);
       if (cached is Map) {
+        debugPrint('[CachedFetch] detail "$key" -> served from cache');
         return fromPayload(cached.cast<String, dynamic>());
       }
+      debugPrint('[CachedFetch] detail "$key" -> nothing cached, rethrowing');
       rethrow;
     }
   }

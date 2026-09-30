@@ -21,11 +21,9 @@ import '../theme/app_spacing.dart';
 import '../widgets/app_refresh_indicator.dart';
 import '../widgets/connection_status_badge.dart';
 import '../widgets/error_state.dart';
-import '../widgets/info_tile.dart';
 import '../widgets/item_picker_sheet.dart';
 import '../widgets/loading_button.dart';
 import '../widgets/notification_bell.dart';
-import '../widgets/person_tile.dart';
 import '../widgets/section_card.dart';
 import '../widgets/skeleton_loader.dart';
 
@@ -168,27 +166,38 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
   /// already typed (e.g. re-picking the same item, or a slow response
   /// landing after they've started editing).
   Future<void> _refreshGuidance(_LineForm line) async {
-    if (line.item == null || _activePriceList == null) return;
+    if (line.item == null || _activePriceList == null) {
+      debugPrint('[CreateOffer] _refreshGuidance skipped: '
+          'item=${line.item?.id}, activePriceList=${_activePriceList?.id} '
+          '(known price lists: ${_priceLists.map((p) => '${p.id}:${p.computedStatus}').toList()})');
+      return;
+    }
     setState(() => line.guidanceLoading = true);
     final priceListId = _activePriceList!.id;
     final itemId = line.item!.id;
     try {
       final results = await context.read<OffersService>().fetchEffectivePrices(priceListId, itemId: itemId);
       if (!mounted) return;
+      debugPrint('[CreateOffer] _refreshGuidance: live fetch OK for item $itemId, price list $priceListId '
+          '-> ${results.length} match(es)');
       setState(() {
         line.guidanceFromCache = false;
         line.guidance = results.isNotEmpty ? results.first : null;
         _applyGuidanceDefaultPrice(line);
       });
-    } catch (_) {
-      // No response at all (offline) — fall back to this price list's
-      // last-known bulk effective prices rather than clearing guidance.
-      final results = await context.read<OffersService>().fetchEffectivePricesBulk(priceListId).catchError((_) => <EffectivePrice>[]);
+    } catch (e) {
+      // No response at all (offline) — fall back to this item's last-known
+      // cached price (synced per item, see OffersService.fetchEffectivePriceCached's
+      // doc comment for why not the old bulk/no-item_id call) rather than
+      // clearing guidance.
+      debugPrint('[CreateOffer] _refreshGuidance: live fetch failed for item $itemId, price list $priceListId '
+          '($e) — falling back to this item\'s cached price');
+      final results = await context.read<OffersService>().fetchEffectivePriceCached(priceListId, itemId).catchError((_) => <EffectivePrice>[]);
       if (!mounted) return;
-      final matches = results.where((p) => p.itemId == itemId);
+      debugPrint('[CreateOffer] _refreshGuidance: cached lookup for item $itemId -> ${results.length} match(es)');
       setState(() {
         line.guidanceFromCache = true;
-        line.guidance = matches.isEmpty ? null : matches.first;
+        line.guidance = results.isEmpty ? null : results.first;
         _applyGuidanceDefaultPrice(line);
       });
     } finally {
@@ -222,6 +231,7 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
     try {
       final results = await context.read<OffersService>().fetchWarehouseStockForItem(itemId);
       if (!mounted) return;
+      debugPrint('[CreateOffer] _loadLineStock: live fetch OK for item $itemId -> ${results.length} warehouse row(s)');
       setState(() => line.stock = results);
       // Best-effort: keep the last-known figures around locally so this
       // same section can still show something useful while offline.
@@ -231,6 +241,7 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
       // all (offline) — either way, fall back to whatever was cached from
       // an earlier successful fetch of this item rather than leaving the
       // section blank/erroring.
+      debugPrint('[CreateOffer] _loadLineStock: live fetch failed for item $itemId ($error) — trying cache');
       final cached = await WarehouseStockCache.instance.load(itemId);
       if (!mounted) return;
       if (cached != null) {
@@ -335,7 +346,14 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
       offers: context.read<OffersService>(),
     );
     if (picked == null) return;
-    setState(() => line.item = picked);
+    setState(() {
+      line.item = picked;
+      // Clears the previous item's proposed price so
+      // _applyGuidanceDefaultPrice (guarded to only fill an empty field)
+      // fills it with the newly-picked item's own guidance instead of
+      // leaving the old item's price sitting there unchanged.
+      line.priceController.clear();
+    });
     _refreshGuidance(line);
     _loadLineStock(line);
   }
@@ -466,22 +484,6 @@ class _CreateOfferScreenState extends State<CreateOfferScreen> {
                           context.read<OfflineSyncService>().ensureReservation(salesmanId).catchError((_) {});
                         }
                       },
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    PersonTile(
-                      label: l10n.createOfferAssignedSalesmanLabel,
-                      name: _selectedCustomer?.activeSalesman?.name,
-                      code: _selectedCustomer?.activeSalesman?.code,
-                      placeholder: _selectedCustomer == null
-                          ? l10n.createOfferSelectCustomerFirst
-                          : l10n.createOfferNoActiveSalesmanAssignment,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    InfoTile(
-                      label: l10n.createOfferPriceListLabel,
-                      icon: Icons.price_change_outlined,
-                      isPlaceholder: _activePriceList == null,
-                      value: _activePriceList?.name ?? l10n.createOfferNoActivePriceListValue,
                     ),
                     if (_activePriceList == null) ...[
                       const SizedBox(height: AppSpacing.sm),

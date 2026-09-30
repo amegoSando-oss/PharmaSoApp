@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import 'offline_db.dart';
@@ -18,23 +19,32 @@ class DataCache {
 
   Future<void> put(String key, dynamic value) async {
     final db = await _db;
+    final encoded = jsonEncode(value);
     await db.insert(
       'data_cache',
       {
         'cache_key': key,
-        'payload': jsonEncode(value),
+        'payload': encoded,
         'updated_at': DateTime.now().toIso8601String(),
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    final rowCount = value is List ? value.length : 1;
+    debugPrint('[DataCache] put "$key" -> $rowCount row(s), ${encoded.length} bytes');
   }
 
   /// Returns the decoded JSON value, or null if [key] was never cached.
   Future<dynamic> get(String key) async {
     final db = await _db;
     final rows = await db.query('data_cache', where: 'cache_key = ?', whereArgs: [key]);
-    if (rows.isEmpty) return null;
-    return jsonDecode(rows.first['payload'] as String);
+    if (rows.isEmpty) {
+      debugPrint('[DataCache] get "$key" -> MISS (nothing cached)');
+      return null;
+    }
+    final decoded = jsonDecode(rows.first['payload'] as String);
+    final rowCount = decoded is List ? decoded.length : 1;
+    debugPrint('[DataCache] get "$key" -> HIT, $rowCount row(s), cached at ${rows.first['updated_at']}');
+    return decoded;
   }
 
   Future<DateTime?> updatedAt(String key) async {

@@ -54,27 +54,37 @@ class ReferenceCache extends ChangeNotifier {
       priceLists = results[2] as List<PriceListEntry>;
       items = results[3] as List<ItemEntry>;
       lastLoadedAt = DateTime.now();
+      debugPrint('[ReferenceCache] live load OK: ${customers.length} customers, ${warehouses.length} warehouses, '
+          '${priceLists.length} price lists (active: ${priceLists.where((p) => p.isActive).map((p) => p.id).toList()}), '
+          '${items.length} items — persisting to disk');
       unawaited(_persist());
       notifyListeners();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[ReferenceCache] live load FAILED ($e)${customers.isEmpty ? ', hydrating from disk' : ', keeping in-memory data'}');
       if (customers.isEmpty) await _hydrateFromDisk();
       rethrow;
     }
   }
 
-  Future<void> _persist() => Future.wait([
-        DataCache.instance.put(_customersKey, customers.map(_customerToJson).toList()),
-        DataCache.instance.put(_warehousesKey, warehouses.map(_warehouseToJson).toList()),
-        DataCache.instance.put(_priceListsKey, priceLists.map(_priceListToJson).toList()),
-        DataCache.instance.put(_itemsKey, items.map(_itemToJson).toList()),
-      ]);
+  Future<void> _persist() async {
+    await Future.wait([
+      DataCache.instance.put(_customersKey, customers.map(_customerToJson).toList()),
+      DataCache.instance.put(_warehousesKey, warehouses.map(_warehouseToJson).toList()),
+      DataCache.instance.put(_priceListsKey, priceLists.map(_priceListToJson).toList()),
+      DataCache.instance.put(_itemsKey, items.map(_itemToJson).toList()),
+    ]);
+    debugPrint('[ReferenceCache] persist() finished writing all 4 keys to disk');
+  }
 
   Future<void> _hydrateFromDisk() async {
     final cachedCustomers = await DataCache.instance.get(_customersKey);
     final cachedWarehouses = await DataCache.instance.get(_warehousesKey);
     final cachedPriceLists = await DataCache.instance.get(_priceListsKey);
     final cachedItems = await DataCache.instance.get(_itemsKey);
-    if (cachedCustomers is! List) return;
+    if (cachedCustomers is! List) {
+      debugPrint('[ReferenceCache] hydrateFromDisk -> nothing cached at all, staying empty');
+      return;
+    }
     customers = cachedCustomers.cast<Map<String, dynamic>>().map(Customer.fromJson).toList();
     warehouses = (cachedWarehouses as List? ?? const [])
         .cast<Map<String, dynamic>>()
@@ -83,6 +93,9 @@ class ReferenceCache extends ChangeNotifier {
     priceLists = (cachedPriceLists as List? ?? const []).cast<Map<String, dynamic>>().map(PriceListEntry.fromJson).toList();
     items = (cachedItems as List? ?? const []).cast<Map<String, dynamic>>().map(ItemEntry.fromJson).toList();
     lastLoadedAt = await DataCache.instance.updatedAt(_customersKey);
+    debugPrint('[ReferenceCache] hydrateFromDisk -> ${customers.length} customers, ${warehouses.length} warehouses, '
+        '${priceLists.length} price lists (active: ${priceLists.where((p) => p.isActive).map((p) => p.id).toList()}), '
+        '${items.length} items, last loaded at $lastLoadedAt');
     notifyListeners();
   }
 

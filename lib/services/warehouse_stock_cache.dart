@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../models/warehouse_item_stock.dart';
@@ -44,17 +45,22 @@ class WarehouseStockCache {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    debugPrint('[WarehouseStockCache] save(item $itemId) -> ${stock.length} warehouse row(s)');
   }
 
   /// Returns null if this item has never been cached.
   Future<CachedWarehouseStock?> load(int itemId) async {
     final db = await _db;
     final rows = await db.query('warehouse_stock_cache', where: 'item_id = ?', whereArgs: [itemId]);
-    if (rows.isEmpty) return null;
+    if (rows.isEmpty) {
+      debugPrint('[WarehouseStockCache] load(item $itemId) -> MISS (nothing cached)');
+      return null;
+    }
     final row = rows.first;
     final stock = (jsonDecode(row['stock'] as String) as List)
         .map((s) => WarehouseItemStock.fromJson(s as Map<String, dynamic>))
         .toList();
+    debugPrint('[WarehouseStockCache] load(item $itemId) -> HIT, ${stock.length} row(s), cached at ${row['cached_at']}');
     return CachedWarehouseStock(stock, DateTime.parse(row['cached_at'] as String));
   }
 }

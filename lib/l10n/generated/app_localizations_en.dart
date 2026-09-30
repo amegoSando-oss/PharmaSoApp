@@ -906,6 +906,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quotationDetailOrderCreatedMessage => 'Sales order created.';
 
   @override
+  String get quotationDetailCancelledMessage => 'Quotation cancelled.';
+
+  @override
+  String get quotationDetailCancelButton => 'Cancel quotation';
+
+  @override
+  String get quotationDetailCancelConfirmTitle => 'Cancel this quotation?';
+
+  @override
+  String get quotationDetailCancelConfirmMessage =>
+      'Every line still open on this quotation will be declined at its full remaining quantity. This can\'t be undone, and none of it can be released into a sales order afterward.';
+
+  @override
+  String get quotationDetailCancelDismiss => 'Not now';
+
+  @override
+  String get quotationDetailCancelConfirm => 'Cancel quotation';
+
+  @override
+  String get quotationDetailInsufficientStockTitle =>
+      'Not enough stock in warehouse';
+
+  @override
+  String get quotationDetailInsufficientStockIntro =>
+      'The following lines exceed what\'s available in the selected warehouse:';
+
+  @override
+  String quotationDetailInsufficientStockLine(
+    Object itemName,
+    Object requested,
+    Object available,
+    Object uom,
+  ) {
+    return '$itemName: requested $requested, only $available $uom available';
+  }
+
+  @override
+  String get quotationDetailInsufficientStockSuggestion =>
+      'You can create the order anyway, or cancel to adjust the quantities or choose a different warehouse.';
+
+  @override
+  String get quotationDetailInsufficientStockCancel => 'Cancel';
+
+  @override
+  String get quotationDetailInsufficientStockCreateAnyway =>
+      'Create order anyway';
+
+  @override
+  String get quotationDetailInsufficientStockCheckFailed =>
+      'Couldn\'t check warehouse availability. Please try again.';
+
+  @override
   String get quotationDetailActionDoneMessage => 'Done.';
 
   @override
@@ -1021,15 +1073,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quotationDetailWarehouseLabel => 'Warehouse';
 
   @override
+  String quotationDetailWarehouseAvailableOption(
+    Object warehouseName,
+    Object available,
+  ) {
+    return '$warehouseName — Available $available';
+  }
+
+  @override
+  String get quotationDetailSplitWarehouseButton =>
+      'Split across another warehouse';
+
+  @override
+  String quotationDetailAllocatedLabel(Object allocated, Object remaining) {
+    return 'Allocated $allocated / $remaining';
+  }
+
+  @override
+  String get quotationDetailWarehouseStockLabel => 'Warehouse stock';
+
+  @override
+  String get quotationDetailRefreshStockTooltip => 'Refresh availability';
+
+  @override
+  String quotationDetailMaxAvailableHint(Object max) {
+    return 'Max $max in this warehouse — add another warehouse for the rest';
+  }
+
+  @override
   String get quotationDetailFillFullRemainingButton =>
       'Fill full remaining quantity';
 
   @override
-  String get quotationDetailReleaseButton => 'Release into sales order';
+  String get quotationDetailReleaseButton => 'Create sales order';
 
   @override
-  String get quotationDetailReleaseButtonFullOnly =>
-      'Release full quotation into sales order';
+  String get quotationDetailReleaseButtonFullOnly => 'Create sales order';
 
   @override
   String get quotationDetailResponseRecordedMessage =>

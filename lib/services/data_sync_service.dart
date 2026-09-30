@@ -92,8 +92,31 @@ class DataSyncService extends ChangeNotifier {
       }
     });
     await _run(_step('effectivePrices'), () async {
+      // One request per price list per item — see
+      // OffersService.fetchEffectivePriceCached's doc comment for why the
+      // backend's bulk (no item_id) mode can't be trusted to cover every
+      // item. Best-effort per item, same reasoning as the warehouseStock
+      // step just below: one bad lookup shouldn't sink the whole step, but
+      // if every single one failed, report that honestly instead of a false
+      // "done".
+      debugPrint('[DataSyncService] effectivePrices: syncing ${reference.priceLists.length} price list(s) '
+          '(${reference.priceLists.map((p) => '${p.id}:${p.computedStatus}').toList()}) x ${reference.items.length} item(s)');
+      var attempts = 0;
+      var failures = 0;
       for (final priceList in reference.priceLists) {
-        await offers.fetchEffectivePricesBulk(priceList.id);
+        for (final item in reference.items) {
+          attempts++;
+          try {
+            await offers.fetchEffectivePriceCached(priceList.id, item.id);
+          } catch (e) {
+            failures++;
+            debugPrint('[DataSyncService] effectivePrices: price list ${priceList.id}, item ${item.id} FAILED ($e)');
+          }
+        }
+      }
+      debugPrint('[DataSyncService] effectivePrices: done, $failures/$attempts lookup(s) failed');
+      if (attempts > 0 && failures == attempts) {
+        throw StateError('Could not reach the server for any price list/item combination.');
       }
     });
     await _run(_step('warehouseStock'), () async {
@@ -105,15 +128,18 @@ class DataSyncService extends ChangeNotifier {
       // one bad lookup shouldn't sink the whole step — but if every single
       // one failed (e.g. this device is actually offline right now), report
       // that honestly instead of a false "done".
+      debugPrint('[DataSyncService] warehouseStock: syncing ${reference.items.length} item(s)');
       var failures = 0;
       for (final item in reference.items) {
         try {
           final stock = await offers.fetchWarehouseStockForItem(item.id);
           await WarehouseStockCache.instance.save(item.id, stock);
-        } catch (_) {
+        } catch (e) {
           failures++;
+          debugPrint('[DataSyncService] warehouseStock: item ${item.id} FAILED ($e)');
         }
       }
+      debugPrint('[DataSyncService] warehouseStock: done, $failures/${reference.items.length} item(s) failed');
       if (reference.items.isNotEmpty && failures == reference.items.length) {
         throw StateError('Could not reach the server for any item.');
       }

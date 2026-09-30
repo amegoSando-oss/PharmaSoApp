@@ -1656,6 +1656,89 @@ abstract class AppLocalizations {
   /// **'Sales order created.'**
   String get quotationDetailOrderCreatedMessage;
 
+  /// No description provided for @quotationDetailCancelledMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Quotation cancelled.'**
+  String get quotationDetailCancelledMessage;
+
+  /// No description provided for @quotationDetailCancelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel quotation'**
+  String get quotationDetailCancelButton;
+
+  /// No description provided for @quotationDetailCancelConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this quotation?'**
+  String get quotationDetailCancelConfirmTitle;
+
+  /// No description provided for @quotationDetailCancelConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Every line still open on this quotation will be declined at its full remaining quantity. This can\'t be undone, and none of it can be released into a sales order afterward.'**
+  String get quotationDetailCancelConfirmMessage;
+
+  /// No description provided for @quotationDetailCancelDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get quotationDetailCancelDismiss;
+
+  /// No description provided for @quotationDetailCancelConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel quotation'**
+  String get quotationDetailCancelConfirm;
+
+  /// No description provided for @quotationDetailInsufficientStockTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough stock in warehouse'**
+  String get quotationDetailInsufficientStockTitle;
+
+  /// No description provided for @quotationDetailInsufficientStockIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'The following lines exceed what\'s available in the selected warehouse:'**
+  String get quotationDetailInsufficientStockIntro;
+
+  /// No description provided for @quotationDetailInsufficientStockLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{itemName}: requested {requested}, only {available} {uom} available'**
+  String quotationDetailInsufficientStockLine(
+    Object itemName,
+    Object requested,
+    Object available,
+    Object uom,
+  );
+
+  /// No description provided for @quotationDetailInsufficientStockSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'You can create the order anyway, or cancel to adjust the quantities or choose a different warehouse.'**
+  String get quotationDetailInsufficientStockSuggestion;
+
+  /// No description provided for @quotationDetailInsufficientStockCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get quotationDetailInsufficientStockCancel;
+
+  /// No description provided for @quotationDetailInsufficientStockCreateAnyway.
+  ///
+  /// In en, this message translates to:
+  /// **'Create order anyway'**
+  String get quotationDetailInsufficientStockCreateAnyway;
+
+  /// No description provided for @quotationDetailInsufficientStockCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check warehouse availability. Please try again.'**
+  String get quotationDetailInsufficientStockCheckFailed;
+
   /// No description provided for @quotationDetailActionDoneMessage.
   ///
   /// In en, this message translates to:
@@ -1827,6 +1910,45 @@ abstract class AppLocalizations {
   /// **'Warehouse'**
   String get quotationDetailWarehouseLabel;
 
+  /// No description provided for @quotationDetailWarehouseAvailableOption.
+  ///
+  /// In en, this message translates to:
+  /// **'{warehouseName} — Available {available}'**
+  String quotationDetailWarehouseAvailableOption(
+    Object warehouseName,
+    Object available,
+  );
+
+  /// No description provided for @quotationDetailSplitWarehouseButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Split across another warehouse'**
+  String get quotationDetailSplitWarehouseButton;
+
+  /// No description provided for @quotationDetailAllocatedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Allocated {allocated} / {remaining}'**
+  String quotationDetailAllocatedLabel(Object allocated, Object remaining);
+
+  /// No description provided for @quotationDetailWarehouseStockLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Warehouse stock'**
+  String get quotationDetailWarehouseStockLabel;
+
+  /// No description provided for @quotationDetailRefreshStockTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh availability'**
+  String get quotationDetailRefreshStockTooltip;
+
+  /// No description provided for @quotationDetailMaxAvailableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Max {max} in this warehouse — add another warehouse for the rest'**
+  String quotationDetailMaxAvailableHint(Object max);
+
   /// No description provided for @quotationDetailFillFullRemainingButton.
   ///
   /// In en, this message translates to:
@@ -1836,13 +1958,13 @@ abstract class AppLocalizations {
   /// No description provided for @quotationDetailReleaseButton.
   ///
   /// In en, this message translates to:
-  /// **'Release into sales order'**
+  /// **'Create sales order'**
   String get quotationDetailReleaseButton;
 
   /// No description provided for @quotationDetailReleaseButtonFullOnly.
   ///
   /// In en, this message translates to:
-  /// **'Release full quotation into sales order'**
+  /// **'Create sales order'**
   String get quotationDetailReleaseButtonFullOnly;
 
   /// No description provided for @quotationDetailResponseRecordedMessage.

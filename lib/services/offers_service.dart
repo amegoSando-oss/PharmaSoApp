@@ -37,21 +37,56 @@ class OfferLineInput {
       };
 }
 
-/// One line released into a sales order, matching what
-/// SalesOrderService::create() expects per entry in `lines[]`: which
-/// quotation line, from which warehouse, and how much of its remaining
-/// quantity (omit to release everything left on the line).
-class OrderReleaseLine {
+/// One line declined outright — the closest thing to "cancel this
+/// quotation" the backend exposes (there's no whole-quotation cancel
+/// endpoint): the given quantity moves from remaining to declined and can
+/// never be released into an order afterward. Matches what
+/// QuotationService::declineLines() expects per entry in `lines[]`.
+class QuotationLineDecline {
   final int lineId;
-  final int warehouseId;
   final num quantity;
+  final String? reason;
 
-  OrderReleaseLine({required this.lineId, required this.warehouseId, required this.quantity});
+  QuotationLineDecline({required this.lineId, required this.quantity, this.reason});
 
   Map<String, dynamic> toJson() => {
         'line_id': lineId,
+        'quantity': quantity,
+        if (reason != null && reason!.isNotEmpty) 'reason': reason,
+      };
+}
+
+/// One warehouse's share of a line being released — a line normally has
+/// just one of these (released whole from a single warehouse), but can
+/// have more than one when a single warehouse doesn't hold enough of the
+/// item, matching CreateSalesOrderData::$lineSplits: one SalesOrderLine
+/// gets created per split.
+class OrderReleaseSplit {
+  final int warehouseId;
+  final num quantity;
+
+  OrderReleaseSplit({required this.warehouseId, required this.quantity});
+
+  Map<String, dynamic> toJson() => {
         'warehouse_id': warehouseId,
         'quantity': quantity,
+      };
+}
+
+/// One quotation line released into a sales order, matching what
+/// SalesOrderService::create() expects per entry in `lines[]`: which
+/// quotation line, and its warehouse split(s) — the sum of [splits]' own
+/// quantities may be less than the line's full remaining quantity (a
+/// partial release), leaving the rest open for a later release.
+class OrderReleaseLine {
+  final int lineId;
+  final List<OrderReleaseSplit> splits;
+
+  OrderReleaseLine({required this.lineId, required this.splits});
+
+  Map<String, dynamic> toJson() => {
+        'line_id': lineId,
+        'splits': splits.map((s) => s.toJson()).toList(),
       };
 }
 
@@ -104,13 +139,24 @@ class OffersService {
     return data.map((p) => EffectivePrice.fromJson(p as Map<String, dynamic>)).toList();
   }
 
-  /// Every effective price on [priceListId] (no `item_id` filter), cached as
-  /// a whole so a single line's guidance can be resolved offline without a
-  /// network round trip per item — see CreateOfferScreen's `_refreshGuidance`.
-  Future<List<EffectivePrice>> fetchEffectivePricesBulk(int priceListId) {
+  /// One item's effective price on [priceListId], cached per item so this
+  /// same lookup can be resolved offline without a network round trip — see
+  /// CreateOfferScreen's `_refreshGuidance` and DataSyncService's
+  /// `effectivePrices` step. Deliberately per-item rather than one bulk
+  /// "every item on this list" call: the backend's no-`item_id` mode caps its
+  /// raw row count *before* deduping to one row per item
+  /// (EffectivePriceLookup::forPriceList), so a bulk pull can silently miss
+  /// items whose active price row didn't happen to rank inside that cap —
+  /// filtering on `item_id` up front (same as the live per-item lookup
+  /// already does) sidesteps that entirely, at the cost of one request per
+  /// item during sync (same trade-off `fetchWarehouseStockForItem` already
+  /// makes for the same reason).
+  Future<List<EffectivePrice>> fetchEffectivePriceCached(int priceListId, int itemId) {
     return CachedFetch.list(
-      key: 'effective_prices:$priceListId',
-      request: () async => (await apiClient.get('/price-lists/$priceListId/effective-prices')) as Map<String, dynamic>,
+      key: 'effective_price:$priceListId:$itemId',
+      request: () async => (await apiClient.get('/price-lists/$priceListId/effective-prices', params: {
+            'item_id': itemId,
+          })) as Map<String, dynamic>,
       fromJson: EffectivePrice.fromJson,
     );
   }
@@ -220,6 +266,18 @@ class OffersService {
 
   Future<Uint8List> quotationPdfBytes(int quotationId) {
     return apiClient.getBytes('/quotations/$quotationId/download');
+  }
+
+  /// Declines a chosen quantity on one or more still-open lines — gated
+  /// server-side by QuotationSetting.line_decline_enabled, and only allowed
+  /// while the quotation is ACCEPTED/PARTIALLY_CONVERTED (same statuses a
+  /// release requires). There is no dedicated "cancel quotation" endpoint;
+  /// declining every open line at its full remaining quantity is the
+  /// closest equivalent available.
+  Future<void> declineLines(int quotationId, List<QuotationLineDecline> lines) async {
+    await apiClient.post('/quotations/$quotationId/decline-lines', prefix: 'quotation-decline', body: {
+      'lines': lines.map((l) => l.toJson()).toList(),
+    });
   }
 
   /// Whether the quotation-settings admin has enabled partial release —
