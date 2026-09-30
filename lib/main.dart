@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
 import 'core/api_client.dart';
 import 'core/app_bootstrapper.dart';
+import 'core/pinned_http_client.dart';
 import 'core/realtime_client.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'screens/splash_screen.dart';
@@ -45,7 +47,17 @@ void main() {
       await localeProvider.load().timeout(const Duration(seconds: 5));
     } catch (_) {}
 
-    runApp(PharmaSalesApp(localeProvider: localeProvider));
+    // Same fail-safe timing as localeProvider.load() above: never let a
+    // slow/stuck asset read (rather than an outright failure, which
+    // buildApiHttpClient already handles) stall the first frame forever.
+    http.Client apiHttpClient;
+    try {
+      apiHttpClient = await buildApiHttpClient().timeout(const Duration(seconds: 5));
+    } catch (_) {
+      apiHttpClient = http.Client();
+    }
+
+    runApp(PharmaSalesApp(localeProvider: localeProvider, apiHttpClient: apiHttpClient));
   }, (error, stack) {
     debugPrint('[Uncaught] $error\n$stack');
   });
@@ -79,15 +91,16 @@ Widget _startupErrorBuilder(FlutterErrorDetails details) {
 
 class PharmaSalesApp extends StatelessWidget {
   final LocaleProvider localeProvider;
+  final http.Client apiHttpClient;
 
-  const PharmaSalesApp({super.key, required this.localeProvider});
+  const PharmaSalesApp({super.key, required this.localeProvider, required this.apiHttpClient});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: localeProvider),
-        Provider<ApiClient>(create: (_) => ApiClient()),
+        Provider<ApiClient>(create: (_) => ApiClient()..setHttpClient(apiHttpClient)),
         ChangeNotifierProvider(create: (context) => AuthService(context.read<ApiClient>())),
         ChangeNotifierProvider(create: (context) {
           final apiClient = context.read<ApiClient>();

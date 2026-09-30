@@ -38,6 +38,13 @@ class ApiClient {
   // since dart:io's own connect timeout can run well past a minute.
   static const _timeout = Duration(seconds: 10);
 
+  /// Defaults to the system-trust client so existing callers/tests keep
+  /// working untouched; [PharmaSalesApp] swaps this for the certificate-
+  /// pinned client from [buildApiHttpClient] once it's ready at startup.
+  http.Client _http = http.Client();
+
+  void setHttpClient(http.Client client) => _http = client;
+
   String? _token;
   UnauthenticatedCallback? onUnauthenticated;
 
@@ -138,7 +145,7 @@ class ApiClient {
   Future<dynamic> get(String path, {Map<String, dynamic>? params, Duration? timeout}) async {
     return _request(
       path,
-      () => http.get(_uri(path, params), headers: _headers()),
+      () => _http.get(_uri(path, params), headers: _headers()),
       timeout: timeout,
     );
   }
@@ -147,7 +154,7 @@ class ApiClient {
   /// the backend's public `/health` route so a missing/expired token never
   /// makes the server look unreachable.
   Future<void> ping({Duration timeout = const Duration(seconds: 6)}) async {
-    final response = await http.get(_uri('/health')).timeout(timeout);
+    final response = await _http.get(_uri('/health')).timeout(timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException('Health check failed', statusCode: response.statusCode);
     }
@@ -156,7 +163,7 @@ class ApiClient {
   Future<dynamic> post(String path, {Map<String, dynamic>? body, String prefix = 'action'}) async {
     return _request(
       path,
-      () => http.post(
+      () => _http.post(
         _uri(path),
         headers: _headers(mutating: true, prefix: prefix),
         body: jsonEncode(body ?? {}),
@@ -167,7 +174,7 @@ class ApiClient {
   Future<dynamic> patch(String path, {Map<String, dynamic>? body, String prefix = 'action'}) async {
     return _request(
       path,
-      () => http.patch(
+      () => _http.patch(
         _uri(path),
         headers: _headers(mutating: true, prefix: prefix),
         body: jsonEncode(body ?? {}),
@@ -178,7 +185,7 @@ class ApiClient {
   Future<dynamic> delete(String path, {String prefix = 'action'}) async {
     return _request(
       path,
-      () => http.delete(_uri(path), headers: _headers(mutating: true, prefix: prefix)),
+      () => _http.delete(_uri(path), headers: _headers(mutating: true, prefix: prefix)),
     );
   }
 
@@ -187,7 +194,7 @@ class ApiClient {
     if (isOffline?.call() == true) throw OfflineException();
     Future<http.Response> requestFn() {
       final headers = _headers()..['Accept'] = '*/*';
-      return http.get(_uri(path), headers: headers);
+      return _http.get(_uri(path), headers: headers);
     }
 
     final response = await requestFn().timeout(const Duration(seconds: 30));
